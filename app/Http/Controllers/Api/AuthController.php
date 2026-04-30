@@ -330,7 +330,7 @@ class AuthController extends Controller
             }
 
             if (!$user->status) {
-                return redirect('http://localhost:5173/login?error=Akun+dinonaktifkan');
+                return redirect(config('app.frontend_url', 'http://localhost:5173') . '/login?error=Akun+dinonaktifkan');
             }
 
             // ── 2FA OTP Logic ─────────────────────────────
@@ -355,11 +355,11 @@ class AuthController extends Controller
             ActivityLog::record('login_attempt', "OTP dikirim ke: {$user->email}", $user->id);
 
             // Redirect ke halaman verifikasi OTP di frontend
-            return redirect("http://localhost:5173/auth/otp?email=" . urlencode($user->email) . "&intent=" . $intentKey);
+            return redirect(config('app.frontend_url', 'http://localhost:5173') . "/auth/otp?email=" . urlencode($user->email) . "&intent=" . $intentKey);
 
         } catch (\Exception $e) {
             Log::error('Google Login Error: ' . $e->getMessage());
-            return redirect('http://localhost:5173/login?error=Otentikasi+Google+Gagal');
+            return redirect(config('app.frontend_url', 'http://localhost:5173') . '/login?error=Otentikasi+Google+Gagal');
         }
     }
 
