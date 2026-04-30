@@ -354,8 +354,15 @@ class AuthController extends Controller
 
             ActivityLog::record('login_attempt', "OTP dikirim ke: {$user->email}", $user->id);
 
-            // Redirect ke halaman verifikasi OTP di frontend
-            return redirect(config('app.frontend_url', 'http://localhost:5173') . "/auth/otp?email=" . urlencode($user->email) . "&intent=" . $intentKey);
+            // Redirect ke halaman verifikasi OTP di frontend (Sertakan OTP di URL untuk testing karena SMTP Railway diblokir)
+            $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
+            $redirectUrl = $frontendUrl . "/auth/otp?email=" . urlencode($user->email) . "&intent=" . $intentKey;
+            
+            if (config('app.debug')) {
+                $redirectUrl .= "&dev_otp=" . $otp;
+            }
+
+            return redirect($redirectUrl);
 
         } catch (\Exception $e) {
             Log::error('Google Login Error: ' . $e->getMessage());
