@@ -14,7 +14,7 @@ nixPkgs = [
   "php82Extensions.tokenizer",
   "php82Extensions.fileinfo",
   "php82Extensions.openssl",
-  "composer"
+  "php82Packages.composer"
 ]
 
 [phases.install]
