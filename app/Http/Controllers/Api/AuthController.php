@@ -33,7 +33,7 @@ class AuthController extends Controller
         ]);
 
         $code = strtoupper(trim($request->company_code));
-        
+
         // Special Bypass for System Administrator
         if ($code === 'SYSAD') {
             return $this->success([
@@ -59,26 +59,26 @@ class AuthController extends Controller
             ->count();
 
         return $this->success([
-            'company_code'  => $code,
-            'company_name'  => $tenant->tenant_name,
-            'tenant_count'  => $tenantCount,
+            'company_code' => $code,
+            'company_name' => $tenant->tenant_name,
+            'tenant_count' => $tenantCount,
         ], 'Kode perusahaan valid');
     }
 
     public function register(RegisterRequest $request)
     {
         $user = User::create([
-            'name'         => $request->full_name,
-            'full_name'    => $request->full_name,
-            'username'     => $request->username,
-            'email'        => $request->email,
-            'phone'        => $request->phone,
-            'password'          => Hash::make($request->password),
-            'role'              => 'customer',
-            'company_code'      => 'UNIV',
-            'created_by'        => $request->username,
-            'updated_by'        => $request->username,
-            'status'            => 1,
+            'name' => $request->full_name,
+            'full_name' => $request->full_name,
+            'username' => $request->username,
+            'email' => $request->email,
+            'phone' => $request->phone,
+            'password' => Hash::make($request->password),
+            'role' => 'customer',
+            'company_code' => 'UNIV',
+            'created_by' => $request->username,
+            'updated_by' => $request->username,
+            'status' => 1,
             'profile_completed' => false,
         ]);
 
@@ -128,11 +128,11 @@ class AuthController extends Controller
     public function updateProfile(Request $request)
     {
         $request->validate([
-            'full_name'   => 'required|string|max:200',
-            'phone'       => 'nullable|string|max:20',
+            'full_name' => 'required|string|max:200',
+            'phone' => 'nullable|string|max:20',
             'email_notif' => 'nullable|boolean',
-            'wa_notif'    => 'nullable|boolean',
-            'photo'       => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'wa_notif' => 'nullable|boolean',
+            'photo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
         $user = $request->user();
@@ -161,47 +161,47 @@ class AuthController extends Controller
         }
 
         $request->validate([
-            'username'    => 'required|string|max:100|unique:users,username,' . $user->id,
-            'full_name'   => 'required|string|max:200',
-            'email'       => 'required|email|max:255|unique:users,email,' . $user->id,
-            'no_ktp'      => 'nullable|string|max:50',
-            'phone'       => 'nullable|string|max:20',
-            'dob'         => 'nullable|date',
-            'role'        => 'required|in:customer,owner',
+            'username' => 'required|string|max:100|unique:users,username,' . $user->id,
+            'full_name' => 'required|string|max:200',
+            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
+            'no_ktp' => 'nullable|string|max:50',
+            'phone' => 'nullable|string|max:20',
+            'dob' => 'nullable|date',
+            'role' => 'required|in:customer,owner',
             'tenant_name' => 'required_if:role,owner|string|max:200',
-            'password'    => 'required|string|min:8|confirmed',
+            'password' => 'required|string|min:8|confirmed',
         ]);
 
         $companyCode = 'UNIV';
         $tenant = null;
         if ($request->role === 'owner') {
             $companyCode = $this->generateCompanyCode($request->tenant_name);
-            
+
             // Calculate trial period from system settings
             $trialDays = (int) \App\Models\SystemSetting::get('trial_days', 30);
 
             // Create tenant with trial
             $tenant = Tenant::create([
-                'user_id'       => $user->id,
-                'tenant_name'   => $request->tenant_name,
-                'slug'          => Str::slug($request->tenant_name) . '-' . time(),
-                'company_code'  => $companyCode,
-                'status'        => 1,
+                'user_id' => $user->id,
+                'tenant_name' => $request->tenant_name,
+                'slug' => Str::slug($request->tenant_name) . '-' . time(),
+                'company_code' => $companyCode,
+                'status' => 1,
                 'trial_ends_at' => now()->addDays($trialDays)->toDateString(),
             ]);
         }
 
         $user->update([
-            'username'          => $request->username,
-            'full_name'         => $request->full_name,
-            'name'              => $request->full_name,
-            'email'             => $request->email,
-            'no_ktp'            => $request->no_ktp,
-            'phone'             => $request->phone,
-            'dob'               => $request->dob,
-            'role'              => $request->role,
-            'password'          => Hash::make($request->password),
-            'company_code'      => $companyCode,
+            'username' => $request->username,
+            'full_name' => $request->full_name,
+            'name' => $request->full_name,
+            'email' => $request->email,
+            'no_ktp' => $request->no_ktp,
+            'phone' => $request->phone,
+            'dob' => $request->dob,
+            'role' => $request->role,
+            'password' => Hash::make($request->password),
+            'company_code' => $companyCode,
             'profile_completed' => true,
         ]);
 
@@ -239,7 +239,7 @@ class AuthController extends Controller
                 $code .= strtoupper(substr($word, 0, 1));
             }
         }
-        
+
         // Pelindung jika nama kosong atau karakter aneh
         if (empty($code)) {
             $code = 'KNTN';
@@ -263,8 +263,8 @@ class AuthController extends Controller
     public function changePassword(Request $request)
     {
         $request->validate([
-            'current_password'      => 'required',
-            'password'              => 'required|min:8|confirmed',
+            'current_password' => 'required',
+            'password' => 'required|min:8|confirmed',
             'password_confirmation' => 'required',
         ]);
 
@@ -291,15 +291,15 @@ class AuthController extends Controller
             /** @var \Laravel\Socialite\Two\GoogleProvider $driver */
             $driver = Socialite::driver('google');
             $googleUser = $driver->stateless()->user();
-            
+
             $user = User::where('email', $googleUser->getEmail())->first();
 
             if ($user) {
                 // Update google_id, ENSURE status is active (1)
                 $user->update([
                     'google_id' => $googleUser->getId(),
-                    'photo'     => $googleUser->getAvatar(),
-                    'status'    => 1,
+                    'photo' => $googleUser->getAvatar(),
+                    'status' => 1,
                 ]);
             } else {
                 // Generate a unique username
@@ -313,19 +313,19 @@ class AuthController extends Controller
 
                 // Create new user with profile_completed = false
                 $user = User::create([
-                    'name'              => $googleUser->getName() ?? $username,
-                    'full_name'         => $googleUser->getName() ?? $username,
-                    'username'          => $username,
-                    'email'             => $googleUser->getEmail(),
-                    'google_id'         => $googleUser->getId(),
-                    'photo'             => $googleUser->getAvatar(),
-                    'password'          => Hash::make(Str::random(24)),
-                    'role'              => 'customer',
-                    'company_code'      => 'UNIV',
-                    'created_by'        => 'System',
-                    'updated_by'        => 'System',
+                    'name' => $googleUser->getName() ?? $username,
+                    'full_name' => $googleUser->getName() ?? $username,
+                    'username' => $username,
+                    'email' => $googleUser->getEmail(),
+                    'google_id' => $googleUser->getId(),
+                    'photo' => $googleUser->getAvatar(),
+                    'password' => Hash::make(Str::random(24)),
+                    'role' => 'customer',
+                    'company_code' => 'UNIV',
+                    'created_by' => 'System',
+                    'updated_by' => 'System',
                     'profile_completed' => false,
-                    'status'            => 1,
+                    'status' => 1,
                 ]);
             }
 
@@ -334,14 +334,14 @@ class AuthController extends Controller
             }
 
             // ── 2FA OTP Logic ─────────────────────────────
-            $otp       = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+            $otp = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
             $intentKey = Str::random(40);
-            
+
             // Simpan OTP di Cache selama 10 menit
             Cache::put("otp_intent:{$intentKey}", [
                 'user_id' => $user->id,
-                'email'   => $user->email,
-                'otp'     => $otp
+                'email' => $user->email,
+                'otp' => $otp
             ], now()->addMinutes(10));
 
             // Kirim Email
@@ -354,15 +354,9 @@ class AuthController extends Controller
 
             ActivityLog::record('login_attempt', "OTP dikirim ke: {$user->email}", $user->id);
 
-            // Redirect ke halaman verifikasi OTP di frontend (Sertakan OTP di URL untuk testing karena SMTP Railway diblokir)
+            // Redirect ke halaman verifikasi OTP di frontend
             $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
-            $redirectUrl = $frontendUrl . "/auth/otp?email=" . urlencode($user->email) . "&intent=" . $intentKey;
-            
-            if (config('app.debug')) {
-                $redirectUrl .= "&dev_otp=" . $otp;
-            }
-
-            return redirect($redirectUrl);
+            return redirect($frontendUrl . "/auth/otp?email=" . urlencode($user->email) . "&intent=" . $intentKey);
 
         } catch (\Exception $e) {
             Log::error('Google Login Error: ' . $e->getMessage());
@@ -373,9 +367,9 @@ class AuthController extends Controller
     public function verifyGoogleOtp(Request $request)
     {
         $request->validate([
-            'email'  => 'required|email',
+            'email' => 'required|email',
             'intent' => 'required|string',
-            'otp'    => 'required|string|size:6',
+            'otp' => 'required|string|size:6',
         ]);
 
         $cached = Cache::get("otp_intent:{$request->intent}");
@@ -390,7 +384,7 @@ class AuthController extends Controller
 
         // OTP Valid -> Selesaikan Login
         $user = User::findOrFail($cached['user_id']);
-        
+
         // Hapus Cache setelah berhasil
         Cache::forget("otp_intent:{$request->intent}");
 
@@ -398,7 +392,7 @@ class AuthController extends Controller
         ActivityLog::record('login', "Login Google 2FA Berhasil: {$user->email}", $user->id);
 
         return $this->success([
-            'user'  => $user,
+            'user' => $user,
             'token' => $token
         ], 'Verifikasi berhasil');
     }
@@ -419,7 +413,7 @@ class AuthController extends Controller
         DB::table('password_reset_tokens')->updateOrInsert(
             ['email' => $user->email],
             [
-                'token'      => Hash::make($token),
+                'token' => Hash::make($token),
                 'created_at' => Carbon::now()
             ]
         );
@@ -438,8 +432,8 @@ class AuthController extends Controller
     public function resetPassword(Request $request)
     {
         $request->validate([
-            'email'    => 'required|email|exists:users,email',
-            'token'    => 'required|string',
+            'email' => 'required|email|exists:users,email',
+            'token' => 'required|string',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
