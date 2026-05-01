@@ -16,8 +16,7 @@
         "league/csv": "9.0",
         "midtrans/midtrans-php": "^2.6",
         "predis/predis": "^3.4",
-        "pusher/pusher-php-server": "^7.2",
-        "resend/resend-php": "^0.11.0"
+        "pusher/pusher-php-server": "^7.2"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

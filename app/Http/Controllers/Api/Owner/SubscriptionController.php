@@ -84,12 +84,33 @@ class SubscriptionController extends Controller
 
         // Send notification email to admins
         try {
+            $client = new \Google\Client();
+            $client->setClientId(env('GMAIL_CLIENT_ID'));
+            $client->setClientSecret(env('GMAIL_CLIENT_SECRET'));
+            $client->refreshToken(env('GMAIL_REFRESH_TOKEN'));
+            
+            $service = new \Google\Service\Gmail($client);
+            $fromEmail = env('MAIL_FROM_ADDRESS', 'pangestu5711@gmail.com');
+            
             $admins = User::where('role', 'admin')->where('status', 1)->where('is_deleted', 0)->get();
             foreach ($admins as $admin) {
-                Mail::to($admin->email)->send(new \App\Mail\PackageRequestedMail($tenant, $request->plan, $prices[$request->plan]));
+                $htmlBody = (new \App\Mail\PackageRequestedMail($tenant, $request->plan, $prices[$request->plan]))->render();
+                
+                $rawMessage = "From: KantinKita <{$fromEmail}>\r\n";
+                $rawMessage .= "To: {$admin->email}\r\n";
+                $rawMessage .= "Subject: Pengajuan Paket Baru: {$request->plan}\r\n";
+                $rawMessage .= "MIME-Version: 1.0\r\n";
+                $rawMessage .= "Content-Type: text/html; charset=utf-8\r\n\r\n";
+                $rawMessage .= $htmlBody;
+
+                $encodedMessage = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($rawMessage));
+                $message = new \Google\Service\Gmail\Message();
+                $message->setRaw($encodedMessage);
+                
+                $service->users_messages->send('me', $message);
             }
         } catch (\Exception $e) {
-            Log::warning('Failed to send package request email: ' . $e->getMessage());
+            Log::warning('Failed to send package request email via Gmail API: ' . $e->getMessage());
         }
 
         return $this->success($subscription, 'Pengajuan paket berhasil dikirim. Menunggu persetujuan admin.', 201);
