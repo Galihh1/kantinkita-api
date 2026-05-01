@@ -423,7 +423,7 @@ class AuthController extends Controller
         // Kirim Email
         $user = User::find($cached['user_id']);
         try {
-            Mail::to($user->email)->send(new \App\Mail\OtpMail($user, $otp));
+            Mail::to($user->email)->send(new OtpMail($user, $otp));
             ActivityLog::record('resend_otp', "OTP dikirim ulang ke: {$user->email}", $user->id);
             return $this->success(null, 'Kode OTP baru telah dikirim ke email Anda.');
         } catch (\Exception $e) {
