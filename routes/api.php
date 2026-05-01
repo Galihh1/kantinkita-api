@@ -47,6 +47,57 @@ Route::get('/health', function () {
 });
 
 // ═══════════════════════════
+// GMAIL DEBUG (Temporary - Remove After Fix)
+// ═══════════════════════════
+Route::get('/debug/gmail', function () {
+    $clientId     = env('GMAIL_CLIENT_ID');
+    $clientSecret = env('GMAIL_CLIENT_SECRET');
+    $refreshToken = env('GMAIL_REFRESH_TOKEN');
+    $fromEmail    = env('MAIL_FROM_ADDRESS');
+
+    // Check env vars exist
+    if (!$clientId || !$clientSecret || !$refreshToken) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Missing Gmail environment variables',
+            'has_client_id'     => !empty($clientId),
+            'has_client_secret' => !empty($clientSecret),
+            'has_refresh_token' => !empty($refreshToken),
+            'has_from_email'    => !empty($fromEmail),
+        ]);
+    }
+
+    try {
+        $client = new \Google\Client();
+        $client->setClientId($clientId);
+        $client->setClientSecret($clientSecret);
+        $result = $client->refreshToken($refreshToken);
+
+        if (isset($result['error'])) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Refresh token failed: ' . $result['error_description'] ?? $result['error'],
+            ]);
+        }
+
+        return response()->json([
+            'status'       => 'ok',
+            'message'      => 'Gmail credentials valid. Token refreshed successfully.',
+            'from_email'   => $fromEmail,
+            'token_type'   => $result['token_type'] ?? 'unknown',
+            'expires_in'   => $result['expires_in'] ?? 'unknown',
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => $e->getMessage(),
+            'class'   => get_class($e),
+        ]);
+    }
+});
+
+
+// ═══════════════════════════
 // PUBLIC ROUTES
 // ═══════════════════════════
 Route::middleware(['throttle:60,1'])->group(function () {

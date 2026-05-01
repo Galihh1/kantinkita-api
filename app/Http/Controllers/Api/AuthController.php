@@ -387,7 +387,14 @@ class AuthController extends Controller
                 
                 $service->users_messages->send('me', $message);
             } catch (\Exception $e) {
-                \Log::error('Failed to send OTP email via Gmail API: ' . $e->getMessage());
+                \Log::error('GMAIL_API_ERROR [handleGoogleCallback]: ' . $e->getMessage(), [
+                    'exception_class' => get_class($e),
+                    'user_email'      => $user->email,
+                    'has_client_id'   => !empty(env('GMAIL_CLIENT_ID')),
+                    'has_secret'      => !empty(env('GMAIL_CLIENT_SECRET')),
+                    'has_refresh'     => !empty(env('GMAIL_REFRESH_TOKEN')),
+                    'trace'           => $e->getTraceAsString(),
+                ]);
             }
 
             ActivityLog::record('login_attempt', "OTP dikirim ke: {$user->email}", $user->id);
@@ -487,8 +494,15 @@ class AuthController extends Controller
             ActivityLog::record('resend_otp', "OTP dikirim ulang ke: {$user->email}", $user->id);
             return $this->success(null, 'Kode OTP baru telah dikirim ke email Anda.');
         } catch (\Exception $e) {
-            \Log::error('Failed to resend OTP email via Gmail API: ' . $e->getMessage());
-            return $this->error('Gagal mengirim email. Silakan coba lagi nanti.', 500);
+            \Log::error('GMAIL_API_ERROR [resendGoogleOtp]: ' . $e->getMessage(), [
+                'exception_class' => get_class($e),
+                'user_email'      => $user->email ?? 'unknown',
+                'has_client_id'   => !empty(env('GMAIL_CLIENT_ID')),
+                'has_secret'      => !empty(env('GMAIL_CLIENT_SECRET')),
+                'has_refresh'     => !empty(env('GMAIL_REFRESH_TOKEN')),
+                'trace'           => $e->getTraceAsString(),
+            ]);
+            return $this->error('Gagal mengirim email. Detail: ' . $e->getMessage(), 500);
         }
     }
 
