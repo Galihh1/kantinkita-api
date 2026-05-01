@@ -85,12 +85,12 @@ class SubscriptionController extends Controller
         // Send notification email to admins
         try {
             $client = new \Google\Client();
-            $client->setClientId(env('GMAIL_CLIENT_ID'));
-            $client->setClientSecret(env('GMAIL_CLIENT_SECRET'));
-            $client->refreshToken(env('GMAIL_REFRESH_TOKEN'));
+            $client->setClientId(config('services.gmail.client_id'));
+            $client->setClientSecret(config('services.gmail.client_secret'));
+            $client->refreshToken(config('services.gmail.refresh_token'));
             
             $service = new \Google\Service\Gmail($client);
-            $fromEmail = env('MAIL_FROM_ADDRESS', 'pangestu5711@gmail.com');
+            $fromEmail = config('services.gmail.from_email', 'pangestu5711@gmail.com');
             
             $admins = User::where('role', 'admin')->where('status', 1)->where('is_deleted', 0)->get();
             foreach ($admins as $admin) {

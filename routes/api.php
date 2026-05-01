@@ -50,10 +50,10 @@ Route::get('/health', function () {
 // GMAIL DEBUG (Temporary - Remove After Fix)
 // ═══════════════════════════
 Route::get('/debug/gmail', function () {
-    $clientId     = env('GMAIL_CLIENT_ID');
-    $clientSecret = env('GMAIL_CLIENT_SECRET');
-    $refreshToken = env('GMAIL_REFRESH_TOKEN');
-    $fromEmail    = env('MAIL_FROM_ADDRESS');
+    $clientId     = config('services.gmail.client_id');
+    $clientSecret = config('services.gmail.client_secret');
+    $refreshToken = config('services.gmail.refresh_token');
+    $fromEmail    = config('services.gmail.from_email');
 
     // Check env vars exist
     if (!$clientId || !$clientSecret || !$refreshToken) {
