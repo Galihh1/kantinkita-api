@@ -346,9 +346,12 @@ class AuthController extends Controller
 
             // Kirim Email menggunakan Resend SDK secara langsung (Bypass SMTP)
             try {
-                $resend = \Resend::client(config('services.resend.key'));
+                $resendKey = env('RESEND_KEY');
+                $resend = \Resend::client($resendKey);
+                $fromAddress = env('MAIL_FROM_ADDRESS', 'onboarding@resend.dev');
+                
                 $resend->emails->send([
-                    'from'    => config('mail.from.address', 'onboarding@resend.dev'),
+                    'from'    => $fromAddress,
                     'to'      => $user->email,
                     'subject' => 'Kode OTP KantinKita',
                     'html'    => (new OtpMail($user, $otp))->render(),
@@ -428,9 +431,12 @@ class AuthController extends Controller
         // Kirim Email
         $user = User::find($cached['user_id']);
         try {
-            $resend = \Resend::client(config('services.resend.key'));
+            $resendKey = env('RESEND_KEY');
+            $resend = \Resend::client($resendKey);
+            $fromAddress = env('MAIL_FROM_ADDRESS', 'onboarding@resend.dev');
+
             $resend->emails->send([
-                'from'    => config('mail.from.address', 'onboarding@resend.dev'),
+                'from'    => $fromAddress,
                 'to'      => $user->email,
                 'subject' => 'Kode OTP KantinKita (Kirim Ulang)',
                 'html'    => (new OtpMail($user, $otp))->render(),
