@@ -348,7 +348,7 @@ class AuthController extends Controller
             try {
                 $resendKey = env('RESEND_KEY');
                 $resend = \Resend::client($resendKey);
-                $fromAddress = env('MAIL_FROM_ADDRESS', 'onboarding@resend.dev');
+                $fromAddress = 'onboarding@resend.dev';
                 
                 $resend->emails->send([
                     'from'    => $fromAddress,
@@ -433,7 +433,7 @@ class AuthController extends Controller
         try {
             $resendKey = env('RESEND_KEY');
             $resend = \Resend::client($resendKey);
-            $fromAddress = env('MAIL_FROM_ADDRESS', 'onboarding@resend.dev');
+            $fromAddress = 'onboarding@resend.dev';
 
             $resend->emails->send([
                 'from'    => $fromAddress,
