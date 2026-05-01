@@ -94,7 +94,7 @@ class SubscriptionController extends Controller
             
             $admins = User::where('role', 'admin')->where('status', 1)->where('is_deleted', 0)->get();
             foreach ($admins as $admin) {
-                $htmlBody = (new \App\Mail\PackageRequestedMail($tenant, $request->plan, $prices[$request->plan]))->render();
+                $htmlBody = (new \App\Mail\PackageRequestedMail($tenant, $request->plan, $prices[$request->plan]))->mailer('log')->render();
                 
                 $rawMessage = "From: KantinKita <{$fromEmail}>\r\n";
                 $rawMessage .= "To: {$admin->email}\r\n";

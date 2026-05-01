@@ -212,11 +212,29 @@ class AuthController extends Controller
         // For owner: send company code email
         if ($request->role === 'owner' && $tenant) {
             try {
-                Mail::to($freshUser->email)->send(
-                    new \App\Mail\TenantRegisteredMail($freshUser, $tenant, $companyCode)
-                );
+                $client = new \Google\Client();
+                $client->setClientId(env('GMAIL_CLIENT_ID'));
+                $client->setClientSecret(env('GMAIL_CLIENT_SECRET'));
+                $client->refreshToken(env('GMAIL_REFRESH_TOKEN'));
+                
+                $service = new \Google\Service\Gmail($client);
+                $fromEmail = env('MAIL_FROM_ADDRESS', 'pangestu5711@gmail.com');
+                $htmlBody = (new \App\Mail\TenantRegisteredMail($freshUser, $tenant, $companyCode))->mailer('log')->render();
+                
+                $rawMessage = "From: KantinKita <{$fromEmail}>\r\n";
+                $rawMessage .= "To: {$freshUser->email}\r\n";
+                $rawMessage .= "Subject: Selamat Datang di KantinKita - Tenant Berhasil Dibuat\r\n";
+                $rawMessage .= "MIME-Version: 1.0\r\n";
+                $rawMessage .= "Content-Type: text/html; charset=utf-8\r\n\r\n";
+                $rawMessage .= $htmlBody;
+
+                $encodedMessage = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($rawMessage));
+                $message = new \Google\Service\Gmail\Message();
+                $message->setRaw($encodedMessage);
+                
+                $service->users_messages->send('me', $message);
             } catch (\Exception $e) {
-                Log::warning('Failed to send tenant registration email: ' . $e->getMessage());
+                Log::warning('Failed to send tenant registration email via Gmail API: ' . $e->getMessage());
             }
         }
 
@@ -354,7 +372,7 @@ class AuthController extends Controller
                 $service = new \Google\Service\Gmail($client);
                 
                 $fromEmail = env('MAIL_FROM_ADDRESS', 'pangestu5711@gmail.com');
-                $htmlBody = (new OtpMail($user, $otp))->render();
+                $htmlBody = (new OtpMail($user, $otp))->mailer('log')->render();
                 
                 $rawMessage = "From: KantinKita <{$fromEmail}>\r\n";
                 $rawMessage .= "To: {$user->email}\r\n";
@@ -451,7 +469,7 @@ class AuthController extends Controller
             $service = new \Google\Service\Gmail($client);
             
             $fromEmail = env('MAIL_FROM_ADDRESS', 'pangestu5711@gmail.com');
-            $htmlBody = (new OtpMail($user, $otp))->render();
+            $htmlBody = (new OtpMail($user, $otp))->mailer('log')->render();
             
             $rawMessage = "From: KantinKita <{$fromEmail}>\r\n";
             $rawMessage .= "To: {$user->email}\r\n";
@@ -506,7 +524,7 @@ class AuthController extends Controller
             $service = new \Google\Service\Gmail($client);
             
             $fromEmail = env('MAIL_FROM_ADDRESS', 'pangestu5711@gmail.com');
-            $htmlBody = (new ResetPasswordMail($user, $token))->render();
+            $htmlBody = (new ResetPasswordMail($user, $token))->mailer('log')->render();
             
             $rawMessage = "From: KantinKita <{$fromEmail}>\r\n";
             $rawMessage .= "To: {$user->email}\r\n";
