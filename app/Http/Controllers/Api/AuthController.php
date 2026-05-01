@@ -344,20 +344,32 @@ class AuthController extends Controller
                 'otp' => $otp
             ], now()->addMinutes(10));
 
-            // Kirim Email menggunakan Resend SDK secara langsung (Bypass SMTP)
+            // Kirim Email menggunakan Gmail API (Official HTTPS)
             try {
-                $resendKey = env('RESEND_KEY');
-                $resend = \Resend::client($resendKey);
-                $fromAddress = 'onboarding@resend.dev';
+                $client = new \Google\Client();
+                $client->setClientId(env('GMAIL_CLIENT_ID'));
+                $client->setClientSecret(env('GMAIL_CLIENT_SECRET'));
+                $client->refreshToken(env('GMAIL_REFRESH_TOKEN'));
                 
-                $resend->emails->send([
-                    'from'    => $fromAddress,
-                    'to'      => $user->email,
-                    'subject' => 'Kode OTP KantinKita',
-                    'html'    => (new OtpMail($user, $otp))->render(),
-                ]);
+                $service = new \Google\Service\Gmail($client);
+                
+                $fromEmail = env('MAIL_FROM_ADDRESS', 'pangestu5711@gmail.com');
+                $htmlBody = (new OtpMail($user, $otp))->render();
+                
+                $rawMessage = "From: KantinKita <{$fromEmail}>\r\n";
+                $rawMessage .= "To: {$user->email}\r\n";
+                $rawMessage .= "Subject: Kode OTP KantinKita\r\n";
+                $rawMessage .= "MIME-Version: 1.0\r\n";
+                $rawMessage .= "Content-Type: text/html; charset=utf-8\r\n\r\n";
+                $rawMessage .= $htmlBody;
+
+                $encodedMessage = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($rawMessage));
+                $message = new \Google\Service\Gmail\Message();
+                $message->setRaw($encodedMessage);
+                
+                $service->users_messages->send('me', $message);
             } catch (\Exception $e) {
-                \Log::error('Failed to send OTP email via Resend: ' . $e->getMessage());
+                \Log::error('Failed to send OTP email via Gmail API: ' . $e->getMessage());
             }
 
             ActivityLog::record('login_attempt', "OTP dikirim ke: {$user->email}", $user->id);
@@ -431,21 +443,33 @@ class AuthController extends Controller
         // Kirim Email
         $user = User::find($cached['user_id']);
         try {
-            $resendKey = env('RESEND_KEY');
-            $resend = \Resend::client($resendKey);
-            $fromAddress = 'onboarding@resend.dev';
+            $client = new \Google\Client();
+            $client->setClientId(env('GMAIL_CLIENT_ID'));
+            $client->setClientSecret(env('GMAIL_CLIENT_SECRET'));
+            $client->refreshToken(env('GMAIL_REFRESH_TOKEN'));
+            
+            $service = new \Google\Service\Gmail($client);
+            
+            $fromEmail = env('MAIL_FROM_ADDRESS', 'pangestu5711@gmail.com');
+            $htmlBody = (new OtpMail($user, $otp))->render();
+            
+            $rawMessage = "From: KantinKita <{$fromEmail}>\r\n";
+            $rawMessage .= "To: {$user->email}\r\n";
+            $rawMessage .= "Subject: Kode OTP KantinKita (Kirim Ulang)\r\n";
+            $rawMessage .= "MIME-Version: 1.0\r\n";
+            $rawMessage .= "Content-Type: text/html; charset=utf-8\r\n\r\n";
+            $rawMessage .= $htmlBody;
 
-            $resend->emails->send([
-                'from'    => $fromAddress,
-                'to'      => $user->email,
-                'subject' => 'Kode OTP KantinKita (Kirim Ulang)',
-                'html'    => (new OtpMail($user, $otp))->render(),
-            ]);
+            $encodedMessage = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($rawMessage));
+            $message = new \Google\Service\Gmail\Message();
+            $message->setRaw($encodedMessage);
+            
+            $service->users_messages->send('me', $message);
 
             ActivityLog::record('resend_otp', "OTP dikirim ulang ke: {$user->email}", $user->id);
             return $this->success(null, 'Kode OTP baru telah dikirim ke email Anda.');
         } catch (\Exception $e) {
-            \Log::error('Failed to resend OTP email via Resend: ' . $e->getMessage());
+            \Log::error('Failed to resend OTP email via Gmail API: ' . $e->getMessage());
             return $this->error('Gagal mengirim email. Silakan coba lagi nanti.', 500);
         }
     }
