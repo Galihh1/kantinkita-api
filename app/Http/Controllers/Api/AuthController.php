@@ -344,12 +344,17 @@ class AuthController extends Controller
                 'otp' => $otp
             ], now()->addMinutes(10));
 
-            // Kirim Email
+            // Kirim Email menggunakan Resend SDK secara langsung (Bypass SMTP)
             try {
-                Mail::to($user->email)->send(new OtpMail($user, $otp));
+                $resend = \Resend::client(config('services.resend.key'));
+                $resend->emails->send([
+                    'from'    => config('mail.from.address', 'onboarding@resend.dev'),
+                    'to'      => $user->email,
+                    'subject' => 'Kode OTP KantinKita',
+                    'html'    => (new OtpMail($user, $otp))->render(),
+                ]);
             } catch (\Exception $e) {
-                Log::error('Failed to send OTP email: ' . $e->getMessage());
-                // Tetap lanjut, user bisa cek log jika mode log aktif
+                \Log::error('Failed to send OTP email via Resend: ' . $e->getMessage());
             }
 
             ActivityLog::record('login_attempt', "OTP dikirim ke: {$user->email}", $user->id);
@@ -423,11 +428,18 @@ class AuthController extends Controller
         // Kirim Email
         $user = User::find($cached['user_id']);
         try {
-            Mail::to($user->email)->send(new OtpMail($user, $otp));
+            $resend = \Resend::client(config('services.resend.key'));
+            $resend->emails->send([
+                'from'    => config('mail.from.address', 'onboarding@resend.dev'),
+                'to'      => $user->email,
+                'subject' => 'Kode OTP KantinKita (Kirim Ulang)',
+                'html'    => (new OtpMail($user, $otp))->render(),
+            ]);
+
             ActivityLog::record('resend_otp', "OTP dikirim ulang ke: {$user->email}", $user->id);
             return $this->success(null, 'Kode OTP baru telah dikirim ke email Anda.');
         } catch (\Exception $e) {
-            \Log::error('Failed to resend OTP email: ' . $e->getMessage());
+            \Log::error('Failed to resend OTP email via Resend: ' . $e->getMessage());
             return $this->error('Gagal mengirim email. Silakan coba lagi nanti.', 500);
         }
     }
