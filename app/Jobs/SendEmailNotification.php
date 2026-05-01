@@ -40,11 +40,32 @@ class SendEmailNotification implements ShouldQueue
         $view = "emails.{$this->template}";
         if (!view()->exists($view)) return;
 
-        Mail::send($view, $data, function ($mail) use ($subject) {
-            $mail->to($this->user->email, $this->user->full_name)
-                 ->subject($subject)
-                 ->from(config('mail.from.address'), config('mail.from.name'));
-        });
+        try {
+            $client = new \Google\Client();
+            $client->setClientId(env('GMAIL_CLIENT_ID'));
+            $client->setClientSecret(env('GMAIL_CLIENT_SECRET'));
+            $client->refreshToken(env('GMAIL_REFRESH_TOKEN'));
+            
+            $service = new \Google\Service\Gmail($client);
+            $fromEmail = env('MAIL_FROM_ADDRESS', 'pangestu5711@gmail.com');
+            $htmlBody = view($view, $data)->render();
+            
+            $rawMessage = "From: KantinKita <{$fromEmail}>\r\n";
+            $rawMessage .= "To: {$this->user->email}\r\n";
+            $rawMessage .= "Subject: {$subject}\r\n";
+            $rawMessage .= "MIME-Version: 1.0\r\n";
+            $rawMessage .= "Content-Type: text/html; charset=utf-8\r\n\r\n";
+            $rawMessage .= $htmlBody;
+
+            $encodedMessage = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($rawMessage));
+            $message = new \Google\Service\Gmail\Message();
+            $message->setRaw($encodedMessage);
+            
+            $service->users_messages->send('me', $message);
+        } catch (\Exception $e) {
+            \Log::error('Job Email Error: ' . $e->getMessage());
+            throw $e; // Rethrow so the job can retry or fail properly
+        }
     }
 
     public function failed(\Throwable $exception): void

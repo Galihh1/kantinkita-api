@@ -219,7 +219,7 @@ class AuthController extends Controller
                 
                 $service = new \Google\Service\Gmail($client);
                 $fromEmail = env('MAIL_FROM_ADDRESS', 'pangestu5711@gmail.com');
-                $htmlBody = (new \App\Mail\TenantRegisteredMail($freshUser, $tenant, $companyCode))->mailer('log')->render();
+                $htmlBody = view('emails.tenant-registered', ['user' => $freshUser, 'tenant' => $tenant, 'companyCode' => $companyCode])->render();
                 
                 $rawMessage = "From: KantinKita <{$fromEmail}>\r\n";
                 $rawMessage .= "To: {$freshUser->email}\r\n";
@@ -372,7 +372,7 @@ class AuthController extends Controller
                 $service = new \Google\Service\Gmail($client);
                 
                 $fromEmail = env('MAIL_FROM_ADDRESS', 'pangestu5711@gmail.com');
-                $htmlBody = (new OtpMail($user, $otp))->mailer('log')->render();
+                $htmlBody = view('emails.otp', ['user' => $user, 'otp' => $otp])->render();
                 
                 $rawMessage = "From: KantinKita <{$fromEmail}>\r\n";
                 $rawMessage .= "To: {$user->email}\r\n";
@@ -469,7 +469,7 @@ class AuthController extends Controller
             $service = new \Google\Service\Gmail($client);
             
             $fromEmail = env('MAIL_FROM_ADDRESS', 'pangestu5711@gmail.com');
-            $htmlBody = (new OtpMail($user, $otp))->mailer('log')->render();
+            $htmlBody = view('emails.otp', ['user' => $user, 'otp' => $otp])->render();
             
             $rawMessage = "From: KantinKita <{$fromEmail}>\r\n";
             $rawMessage .= "To: {$user->email}\r\n";
@@ -524,7 +524,7 @@ class AuthController extends Controller
             $service = new \Google\Service\Gmail($client);
             
             $fromEmail = env('MAIL_FROM_ADDRESS', 'pangestu5711@gmail.com');
-            $htmlBody = (new ResetPasswordMail($user, $token))->mailer('log')->render();
+            $htmlBody = view('emails.reset_password', ['user' => $user, 'token' => $token])->render();
             
             $rawMessage = "From: KantinKita <{$fromEmail}>\r\n";
             $rawMessage .= "To: {$user->email}\r\n";
