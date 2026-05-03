@@ -64,8 +64,18 @@ class User extends Authenticatable
     public function getPhotoUrlAttribute(): ?string
     {
         if (!$this->photo) return null;
-        if (filter_var($this->photo, FILTER_VALIDATE_URL)) return $this->photo;
-        return asset('storage/' . $this->photo);
+        if (filter_var($this->photo, FILTER_VALIDATE_URL)) {
+            $url = $this->photo;
+        } else {
+            $url = asset('storage/' . $this->photo);
+        }
+
+        // Force HTTPS for assets if not in local environment
+        if (config('app.env') !== 'local' && str_starts_with($url, 'http://')) {
+            $url = str_replace('http://', 'https://', $url);
+        }
+
+        return $url;
     }
 
     public function scopeActive($query) { return $query->where('status', 1)->where('is_deleted', 0); }

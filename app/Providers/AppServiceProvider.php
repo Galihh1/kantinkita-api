@@ -16,6 +16,11 @@ class AppServiceProvider extends ServiceProvider
         // Force HTTPS in production
         if (config('app.env') !== 'local') {
             \Illuminate\Support\Facades\URL::forceScheme('https');
+            
+            // Ensure storage symlink exists
+            if (!file_exists(public_path('storage'))) {
+                \Illuminate\Support\Facades\Artisan::call('storage:link');
+            }
         }
 
         // Define the 'api' rate limiter required by throttleApi() middleware

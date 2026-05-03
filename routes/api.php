@@ -241,16 +241,24 @@ Route::get('/debug-db', function () {
         }
     }
 
+    $recentUsers = [];
     $recentErrors = [];
     $columns = [];
     $updateStatus = 'none';
     try {
-        // Update sysad avatar
+        // List users for verification
         if (\Illuminate\Support\Facades\Schema::hasTable('users')) {
+            $recentUsers = \DB::table('users')
+                ->select('username', 'photo', 'email')
+                ->limit(10)
+                ->get();
+
+            // Try update with case-insensitive or different field if needed
             $updated = \DB::table('users')
                 ->where('username', 'sysad')
+                ->orWhere('email', 'LIKE', '%sysad%')
                 ->update(['photo' => 'avatars/sysad.png']);
-            $updateStatus = $updated ? 'success: sysad photo updated' : 'no change: user sysad not found or photo already set';
+            $updateStatus = $updated ? 'success: sysad photo updated' : 'no change or user not found';
         }
 
         if (\Illuminate\Support\Facades\Schema::hasTable('error_logs')) {
@@ -271,6 +279,7 @@ Route::get('/debug-db', function () {
 
     return response()->json([
         'update_sysad_photo' => $updateStatus,
+        'recent_users' => $recentUsers,
         'tables' => $status,
         'columns' => $columns,
         'recent_errors' => $recentErrors
