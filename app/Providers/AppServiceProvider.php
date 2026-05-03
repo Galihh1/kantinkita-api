@@ -13,14 +13,14 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Force HTTPS in production
-        if (config('app.env') !== 'local') {
+        // Force HTTPS for production domain
+        if (str_contains(request()->getHost(), 'railway.app')) {
             \Illuminate\Support\Facades\URL::forceScheme('https');
-            
-            // Ensure storage symlink exists
-            if (!file_exists(public_path('storage'))) {
-                \Illuminate\Support\Facades\Artisan::call('storage:link');
-            }
+        }
+
+        // Ensure storage symlink exists
+        if (config('app.env') !== 'local' && !file_exists(public_path('storage'))) {
+            \Illuminate\Support\Facades\Artisan::call('storage:link');
         }
 
         // Define the 'api' rate limiter required by throttleApi() middleware
