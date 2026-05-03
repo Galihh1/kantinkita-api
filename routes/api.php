@@ -251,7 +251,10 @@ Route::get('/debug-db', function() {
                 ->get();
         }
         if (\Illuminate\Support\Facades\Schema::hasTable('permissions')) {
-            $columns = \Illuminate\Support\Facades\Schema::getColumnListing('permissions');
+            $columns['permissions'] = \Illuminate\Support\Facades\Schema::getColumnListing('permissions');
+        }
+        if (\Illuminate\Support\Facades\Schema::hasTable('system_settings')) {
+            $columns['system_settings'] = \Illuminate\Support\Facades\Schema::getColumnListing('system_settings');
         }
     } catch (\Exception $e) {
         $recentErrors = 'Error: ' . $e->getMessage();
@@ -259,7 +262,7 @@ Route::get('/debug-db', function() {
 
     return response()->json([
         'tables' => $status,
-        'permissions_columns' => $columns,
+        'columns' => $columns,
         'recent_errors' => $recentErrors
     ]);
 });
