@@ -277,7 +277,24 @@ Route::get('/debug-db', function () {
         $recentErrors = 'Error: ' . $e->getMessage();
     }
 
+    $activeCarts = [];
+    try {
+        if (\Illuminate\Support\Facades\Schema::hasTable('orders')) {
+            $activeCarts = \DB::table('orders')
+                ->where('status', 'cart')
+                ->limit(5)
+                ->get()
+                ->map(function($cart) {
+                    $cart->items = \DB::table('order_items')->where('order_id', $cart->id)->get();
+                    return $cart;
+                });
+        }
+    } catch (\Exception $e) {
+        $activeCarts = 'Error: ' . $e->getMessage();
+    }
+
     return response()->json([
+        'active_carts' => $activeCarts,
         'update_sysad_photo' => $updateStatus,
         'recent_users' => $recentUsers,
         'tables' => $status,
