@@ -225,19 +225,53 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/stats', [AdminTenantController::class, 'stats']);
     });
 });
-// EMERGENCY RESTORE FOR SYSAD
-Route::get('/emergency-restore-sysad', function() {
-    $adminRole = \App\Models\Role::where('slug', 'admin')->first();
-    $user = \App\Models\User::where('username', 'sysad')
-        ->orWhere('email', 'like', 'sysad%')
-        ->first();
-        
-    if ($user && $adminRole) {
-        $user->update([
-            'role' => 'admin',
-            'role_id' => $adminRole->id
-        ]);
-        return "SUCCESS: User {$user->username} restored to Admin. Silakan Logout dan Login kembali.";
+// 1. Perbaikan Struktur DB (Tanpa menyentuh User)
+Route::get('/fix-db-schema', function () {
+    try {
+        // Reset sequences (PKEY)
+        $tables = ['users', 'tenants', 'categories', 'menus', 'orders', 'order_items', 'subscriptions'];
+        foreach ($tables as $table) {
+            $maxId = \DB::table($table)->max('id') ?? 0;
+            $seqName = "{$table}_id_seq";
+            try { \DB::statement("SELECT setval('$seqName', $maxId + 1, false)"); } catch (\Exception $e) {}
+        }
+
+        // Fix Subscription Columns
+        if (\Schema::hasTable('subscriptions')) {
+            \DB::statement("ALTER TABLE subscriptions ALTER COLUMN billing_status TYPE VARCHAR(50)");
+            \DB::statement("ALTER TABLE subscriptions ALTER COLUMN billing_status SET DEFAULT 'pending'");
+            \DB::statement("ALTER TABLE subscriptions ALTER COLUMN billing_start DROP NOT NULL");
+            \DB::statement("ALTER TABLE subscriptions ALTER COLUMN billing_end DROP NOT NULL");
+            if (\Schema::hasColumn('subscriptions', 'approval_status')) {
+                \DB::statement("ALTER TABLE subscriptions ALTER COLUMN approval_status TYPE VARCHAR(50)");
+            }
+        }
+        return response()->json(['status' => 'success', 'message' => 'Struktur database berhasil diperbaiki.']);
+    } catch (\Exception $e) {
+        return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
     }
-    return "ERROR: User sysad not found.";
+});
+
+// 2. Sinkronisasi Mandiri untuk Owner (Aman, hanya untuk user yang sedang login)
+Route::middleware('auth:sanctum')->get('/owner/sync-my-role', function () {
+    $user = request()->user();
+    $ownerRole = \App\Models\Role::where('slug', 'owner')->first();
+    
+    // Pastikan user ini memang punya tenant (Owner sah)
+    $hasTenant = \App\Models\Tenant::where('user_id', $user->id)->exists();
+    
+    if ($hasTenant && $ownerRole) {
+        $user->update([
+            'role' => 'owner',
+            'role_id' => $ownerRole->id
+        ]);
+        
+        // Sync permissions owner juga
+        $ownerPerms = \App\Models\Permission::whereIn('resource', ['Menu', 'Pesanan', 'Laporan', 'User', 'Tenant'])->pluck('id');
+        $ownerRole->permissions()->sync($ownerPerms);
+        
+        return response()->json(['status' => 'success', 'message' => 'Akun Owner Anda berhasil disinkronkan. Silakan Logout dan Login kembali.']);
+    }
+    
+    return response()->json(['status' => 'error', 'message' => 'Anda tidak terdeteksi sebagai pemilik kantin.'], 403);
 });
