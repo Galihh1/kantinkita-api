@@ -16,7 +16,7 @@ return new class extends Migration
             $table->id();
             $table->string('name', 100);
             $table->string('slug', 120)->unique();
-            $table->string('group', 50)->default('general'); // e.g., 'reports', 'settings'
+            $table->string('group_name', 50)->default('general'); // e.g., 'reports', 'settings'
             $table->text('description')->nullable();
             $table->timestamps();
         });

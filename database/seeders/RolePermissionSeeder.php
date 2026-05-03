@@ -33,7 +33,7 @@ class RolePermissionSeeder extends Seeder
                     ['slug' => $slug],
                     [
                         'name'     => $name,
-                        'group'    => strtolower($res),
+                        'group_name'    => strtolower($res),
                         'resource' => $res,
                         'description' => "Hak akses untuk {$act} data {$res}"
                     ]

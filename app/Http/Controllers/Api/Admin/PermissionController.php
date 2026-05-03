@@ -17,7 +17,7 @@ class PermissionController extends Controller
             return $this->error('Tabel permissions tidak ditemukan di database. Pastikan migrasi telah dijalankan.', 500);
         }
 
-        $permissions = Permission::orderByRaw('"group" ASC')
+        $permissions = Permission::orderByRaw('"group_name" ASC')
             ->orderBy('name', 'asc')
             ->get();
 
@@ -39,7 +39,7 @@ class PermissionController extends Controller
         $permission = Permission::create([
             'name'        => $request->name,
             'slug'        => Str::slug($request->name),
-            'group'       => $request->group,
+            'group_name'  => $request->group,
             'resource'    => $resource,
             'description' => $request->description,
         ]);
@@ -57,7 +57,11 @@ class PermissionController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        $data = $request->only(['name', 'group', 'description']);
+        $data = $request->only(['name', 'description']);
+        if ($request->has('group')) {
+            $data['group_name'] = $request->group;
+        }
+
         if (isset($data['name'])) {
             $data['slug'] = Str::slug($data['name']);
         }
