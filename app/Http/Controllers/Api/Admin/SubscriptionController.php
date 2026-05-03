@@ -22,7 +22,11 @@ class SubscriptionController extends Controller
                     $q2->where('tenant_name', 'like', "%{$request->search}%")
                 )
             )
-            ->orderByRaw("FIELD(approval_status, 'pending', 'approved', 'rejected')")
+            ->orderByRaw("CASE 
+                WHEN approval_status = 'pending' THEN 1 
+                WHEN approval_status = 'approved' THEN 2 
+                WHEN approval_status = 'rejected' THEN 3 
+                ELSE 4 END")
             ->orderByDesc('created_at')
             ->paginate(20);
 
