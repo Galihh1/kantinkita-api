@@ -23,48 +23,69 @@ class CheckoutController extends Controller
 
     public function checkout(Request $request)
     {
-        $request->validate(['notes' => 'nullable|string|max:500']);
-
-        /** @var Order|null $cart */
-        $cart = Order::where('user_id', $request->user()->id)
-            ->where('status', 'cart')
-            ->with(['items.menu', 'tenant'])
-            ->orderBy('id', 'desc')
-            ->first();
-
-        if (!$cart || $cart->items->isEmpty()) {
-            return $this->error('Keranjang belanja kosong.', 422);
-        }
-
-        if (!$cart->tenant || !$cart->tenant->status) {
-            return $this->error('Tenant tidak aktif.', 422);
-        }
-
-        if (!$cart->tenant->is_open) {
-            return $this->error('Tenant sedang tutup.', 422);
-        }
-
-        $minOrder = $cart->tenant->min_order ?? 0;
-        if ($cart->total_amount < $minOrder) {
-            return $this->error('Minimum order Rp ' . number_format($minOrder, 0, ',', '.'), 422);
-        }
-
-        foreach ($cart->items as $item) {
-            if (!$item->menu || !$item->menu->is_available) {
-                return $this->error("Menu '{$item->menu_name}' sudah tidak tersedia.", 422);
-            }
-        }
+        $request->validate([
+            'tenant_id' => 'required|exists:tenants,id',
+            'items'     => 'required|array|min:1',
+            'items.*.menu_id'  => 'required|exists:menus,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'notes'     => 'nullable|string|max:500',
+        ]);
 
         DB::beginTransaction();
         try {
-            $serviceFee  = $this->orderService->calculateFee($cart->total_amount);
-            $grandTotal  = $cart->total_amount + $serviceFee;
+            $tenant = \App\Models\Tenant::findOrFail($request->tenant_id);
+            
+            if (!$tenant->status) return $this->error('Tenant tidak aktif.', 422);
+            if (!$tenant->is_open)   return $this->error('Tenant sedang tutup.', 422);
+
+            // Create or get cart
+            $cart = Order::where('user_id', $request->user()->id)
+                ->where('status', 'cart')
+                ->first();
+
+            if (!$cart) {
+                $cart = Order::create([
+                    'order_number' => 'TEMP-' . time(),
+                    'user_id'      => $request->user()->id,
+                    'tenant_id'    => $tenant->id,
+                    'status'       => 'cart',
+                    'company_code' => 'UNIV',
+                ]);
+            }
+
+            // Sync items from request
+            $cart->items()->delete();
+            $totalAmount = 0;
+            foreach ($request->items as $itemData) {
+                $menu = \App\Models\Menu::findOrFail($itemData['menu_id']);
+                if (!$menu->is_available) {
+                    throw new \Exception("Menu '{$menu->name}' sudah tidak tersedia.");
+                }
+                $subtotal = $menu->price * $itemData['quantity'];
+                $cart->items()->create([
+                    'menu_id'      => $menu->id,
+                    'menu_name'    => $menu->name,
+                    'price'        => $menu->price,
+                    'quantity'     => $itemData['quantity'],
+                    'subtotal'     => $subtotal,
+                    'company_code' => 'UNIV',
+                ]);
+                $totalAmount += $subtotal;
+            }
+
+            if ($totalAmount < ($tenant->min_order ?? 0)) {
+                throw new \Exception('Minimum order Rp ' . number_format($tenant->min_order, 0, ',', '.'));
+            }
+
+            $serviceFee  = $this->orderService->calculateFee($totalAmount);
+            $grandTotal  = $totalAmount + $serviceFee;
             $orderNumber = $this->orderService->generateOrderNumber();
             $expiresAt   = now()->addMinutes((int) \App\Models\SystemSetting::get('payment_timeout', 30));
 
             $cart->update([
                 'order_number' => $orderNumber,
                 'status'       => Order::STATUS_PENDING,
+                'total_amount' => $totalAmount,
                 'service_fee'  => $serviceFee,
                 'grand_total'  => $grandTotal,
                 'notes'        => $request->notes,
@@ -84,7 +105,7 @@ class CheckoutController extends Controller
             ], 'Checkout berhasil');
         } catch (\Exception $e) {
             DB::rollBack();
-            throw $e;
+            return $this->error($e->getMessage(), 422);
         }
     }
 }
