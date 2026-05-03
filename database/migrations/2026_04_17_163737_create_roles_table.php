@@ -29,7 +29,7 @@ return new class extends Migration
 
         // Add 'resource' to permissions to group them by module (Menu, Pesanan, etc.)
         Schema::table('permissions', function (Blueprint $table) {
-            $table->string('resource', 100)->default('general')->after('group');
+            $table->string('resource', 100)->default('general');
         });
     }
 

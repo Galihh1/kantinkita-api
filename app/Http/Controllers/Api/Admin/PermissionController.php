@@ -13,7 +13,14 @@ class PermissionController extends Controller
 
     public function index()
     {
-        $permissions = Permission::orderBy('group')->orderBy('name')->get();
+        if (!\Illuminate\Support\Facades\Schema::hasTable('permissions')) {
+            return $this->error('Tabel permissions tidak ditemukan di database. Pastikan migrasi telah dijalankan.', 500);
+        }
+
+        $permissions = Permission::orderByRaw('"group" ASC')
+            ->orderBy('name', 'asc')
+            ->get();
+
         return $this->success($permissions);
     }
 
