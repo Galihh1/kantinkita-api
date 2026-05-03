@@ -15,10 +15,10 @@ class SettingController extends Controller
     public function index(Request $request)
     {
         $settings = SystemSetting::where('is_deleted', 0)
-            ->when($request->group, fn($q) => $q->where('group', $request->group))
-            ->orderBy('group')->orderBy('key')
+            ->when($request->group, fn($q) => $q->where('group_name', $request->group))
+            ->orderBy('group_name')->orderBy('key')
             ->get()
-            ->groupBy('group');
+            ->groupBy('group_name');
 
         return $this->success($settings);
     }

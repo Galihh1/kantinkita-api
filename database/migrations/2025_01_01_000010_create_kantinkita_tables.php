@@ -188,7 +188,7 @@ return new class extends Migration {
             $table->string('key', 100)->unique();
             $table->text('value')->nullable();
             $table->string('type', 20)->default('string');
-            $table->string('group', 50)->default('general');
+            $table->string('group_name', 50)->default('general');
             $table->string('label', 200)->nullable();
             $table->text('description')->nullable();
             $table->json('options')->nullable();
