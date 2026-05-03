@@ -242,27 +242,24 @@ Route::get('/debug-db', function() {
     }
 
     $recentErrors = [];
+    $columns = [];
     try {
         if (\Illuminate\Support\Facades\Schema::hasTable('error_logs')) {
             $recentErrors = \DB::table('error_logs')
                 ->orderBy('created_at', 'desc')
                 ->limit(10)
-                ->get()
-                ->map(function($log) {
-                    return [
-                        'time'    => $log->created_at,
-                        'message' => $log->message,
-                        'endpoint'=> $log->endpoint,
-                        // 'trace'   => substr($log->stack_trace, 0, 500) . '...' // Trace dipotong agar tidak kepanjangan
-                    ];
-                });
+                ->get();
+        }
+        if (\Illuminate\Support\Facades\Schema::hasTable('permissions')) {
+            $columns = \Illuminate\Support\Facades\Schema::getColumnListing('permissions');
         }
     } catch (\Exception $e) {
-        $recentErrors = 'Error loading logs: ' . $e->getMessage();
+        $recentErrors = 'Error: ' . $e->getMessage();
     }
 
     return response()->json([
         'tables' => $status,
+        'permissions_columns' => $columns,
         'recent_errors' => $recentErrors
     ]);
 });
