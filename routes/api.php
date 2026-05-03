@@ -225,4 +225,40 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/stats', [AdminTenantController::class, 'stats']);
     });
 });
+// Temporary Database Fix Route
+Route::get('/fix-db-schema', function () {
+    try {
+        // 1. Reset all sequences (Fix Unique Violation PKEY)
+        $tables = \DB::select("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'");
+        foreach ($tables as $t) {
+            $table = $t->table_name;
+            try {
+                \DB::statement("SELECT setval(pg_get_serial_sequence('$table', 'id'), coalesce(max(id), 1), max(id) IS NOT null) FROM $table");
+            } catch (\Exception $e) {
+                // Skip if table has no id or sequence
+            }
+        }
 
+        // 2. Convert Enum columns to String in subscriptions (Fix Enum pending error)
+        // We use changeColumn or raw SQL to avoid ENUM rigidity
+        if (\Schema::hasTable('subscriptions')) {
+            \DB::statement("ALTER TABLE subscriptions ALTER COLUMN billing_status TYPE VARCHAR(50)");
+            \DB::statement("ALTER TABLE subscriptions ALTER COLUMN billing_status SET DEFAULT 'pending'");
+            
+            // Check if approval_status exists and convert it too
+            if (\Schema::hasColumn('subscriptions', 'approval_status')) {
+                \DB::statement("ALTER TABLE subscriptions ALTER COLUMN approval_status TYPE VARCHAR(50)");
+                \DB::statement("ALTER TABLE subscriptions ALTER COLUMN approval_status SET DEFAULT 'pending'");
+            } else {
+                // If it doesn't exist, maybe we should add it if the code expects it
+                \Schema::table('subscriptions', function ($table) {
+                    $table->string('approval_status', 50)->default('pending')->after('billing_status');
+                });
+            }
+        }
+
+        return response()->json(['status' => 'success', 'message' => 'Sequences synced and Enum columns converted to String successfully.']);
+    } catch (\Exception $e) {
+        return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+    }
+});
