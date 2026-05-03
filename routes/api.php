@@ -239,18 +239,20 @@ Route::get('/fix-db-schema', function () {
             }
         }
 
-        // 2. Convert Enum columns to String in subscriptions (Fix Enum pending error)
-        // We use changeColumn or raw SQL to avoid ENUM rigidity
+        // 2. Convert Enum columns to String and make dates nullable in subscriptions
         if (\Schema::hasTable('subscriptions')) {
             \DB::statement("ALTER TABLE subscriptions ALTER COLUMN billing_status TYPE VARCHAR(50)");
             \DB::statement("ALTER TABLE subscriptions ALTER COLUMN billing_status SET DEFAULT 'pending'");
             
+            // Make dates nullable
+            \DB::statement("ALTER TABLE subscriptions ALTER COLUMN billing_start DROP NOT NULL");
+            \DB::statement("ALTER TABLE subscriptions ALTER COLUMN billing_end DROP NOT NULL");
+
             // Check if approval_status exists and convert it too
             if (\Schema::hasColumn('subscriptions', 'approval_status')) {
                 \DB::statement("ALTER TABLE subscriptions ALTER COLUMN approval_status TYPE VARCHAR(50)");
                 \DB::statement("ALTER TABLE subscriptions ALTER COLUMN approval_status SET DEFAULT 'pending'");
             } else {
-                // If it doesn't exist, maybe we should add it if the code expects it
                 \Schema::table('subscriptions', function ($table) {
                     $table->string('approval_status', 50)->default('pending')->after('billing_status');
                 });
