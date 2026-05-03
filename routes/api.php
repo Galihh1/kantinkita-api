@@ -296,6 +296,12 @@ Route::get('/debug-db', function () {
         $activeCarts = 'Error: ' . $e->getMessage();
     }
 
+    $dbInfo = [
+        'connection' => config('database.default'),
+        'host' => config('database.connections.pgsql.host'),
+        'database' => config('database.connections.pgsql.database'),
+    ];
+
     $allRecentOrders = [];
     try {
         if (\Illuminate\Support\Facades\Schema::hasTable('orders')) {
@@ -309,6 +315,7 @@ Route::get('/debug-db', function () {
     }
 
     return response()->json([
+        'db_info' => $dbInfo,
         'all_recent_orders' => $allRecentOrders,
         'update_sysad_photo' => $updateStatus,
         'recent_users' => $recentUsers,
