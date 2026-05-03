@@ -19,7 +19,7 @@ class TenantController extends Controller
                 $q->where('role', 'admin');
             })
             ->when($request->search, fn($q) => $q->where('tenant_name', 'like', "%{$request->search}%"))
-            ->when($request->is_open, fn($q) => $q->where('is_open', $request->is_open))
+            ->when($request->has('is_open'), fn($q) => $q->where('is_open', $request->is_open))
             ->latest()->paginate(12);
 
         return $this->success($tenants);

@@ -28,7 +28,8 @@ class CheckoutController extends Controller
         $cart = Order::where('user_id', $request->user()->id)
             ->where('status', 'cart')
             ->with(['items.menu', 'tenant'])
-            ->latest()->first();
+            ->orderBy('id', 'desc')
+            ->first();
 
         if (!$cart || $cart->items->isEmpty()) {
             return $this->error('Keranjang belanja kosong.', 422);
