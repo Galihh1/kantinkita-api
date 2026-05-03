@@ -259,7 +259,15 @@ Route::get('/fix-db-schema', function () {
             }
         }
 
-        return response()->json(['status' => 'success', 'message' => 'Sequences synced and Enum columns converted to String successfully.']);
+        // 3. Fix Owner Permissions
+        $ownerRole = \App\Models\Role::where('slug', 'owner')->first();
+        if ($ownerRole) {
+            $ownerPerms = \App\Models\Permission::whereIn('resource', ['Menu', 'Pesanan', 'Laporan', 'User', 'Tenant'])
+                ->pluck('id');
+            $ownerRole->permissions()->sync($ownerPerms);
+        }
+
+        return response()->json(['status' => 'success', 'message' => 'Sequences synced, Enum columns converted, and Owner permissions updated successfully.']);
     } catch (\Exception $e) {
         return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
     }
