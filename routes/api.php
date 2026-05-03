@@ -302,6 +302,18 @@ Route::get('/debug-db', function () {
         'database' => config('database.connections.pgsql.database'),
     ];
 
+    $recentActivity = [];
+    try {
+        if (\Illuminate\Support\Facades\Schema::hasTable('activity_logs')) {
+            $recentActivity = \DB::table('activity_logs')
+                ->orderBy('created_at', 'desc')
+                ->limit(5)
+                ->get();
+        }
+    } catch (\Exception $e) {
+        $recentActivity = 'Error: ' . $e->getMessage();
+    }
+
     $allRecentOrders = [];
     try {
         if (\Illuminate\Support\Facades\Schema::hasTable('orders')) {
@@ -316,6 +328,7 @@ Route::get('/debug-db', function () {
 
     return response()->json([
         'db_info' => $dbInfo,
+        'recent_activity' => $recentActivity,
         'all_recent_orders' => $allRecentOrders,
         'update_sysad_photo' => $updateStatus,
         'recent_users' => $recentUsers,
