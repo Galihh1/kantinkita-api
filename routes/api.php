@@ -229,13 +229,40 @@ Route::middleware(['auth:sanctum'])->group(function () {
 // Temporary Debug Route (Remove after fixing)
 Route::get('/debug-db', function() {
     $tables = ['permissions', 'roles', 'error_logs', 'users', 'tenants', 'activity_logs'];
-    $results = [];
+    $status = [];
     foreach ($tables as $table) {
         try {
-            $results[$table] = \Illuminate\Support\Facades\Schema::hasTable($table);
+            $status[$table] = [
+                'exists' => \Illuminate\Support\Facades\Schema::hasTable($table),
+                'count'  => \Illuminate\Support\Facades\Schema::hasTable($table) ? \DB::table($table)->count() : 0
+            ];
         } catch (\Exception $e) {
-            $results[$table] = 'Error: ' . $e->getMessage();
+            $status[$table] = 'Error: ' . $e->getMessage();
         }
     }
-    return response()->json($results);
+
+    $recentErrors = [];
+    try {
+        if (\Illuminate\Support\Facades\Schema::hasTable('error_logs')) {
+            $recentErrors = \DB::table('error_logs')
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get()
+                ->map(function($log) {
+                    return [
+                        'time'    => $log->created_at,
+                        'message' => $log->message,
+                        'endpoint'=> $log->endpoint,
+                        // 'trace'   => substr($log->stack_trace, 0, 500) . '...' // Trace dipotong agar tidak kepanjangan
+                    ];
+                });
+        }
+    } catch (\Exception $e) {
+        $recentErrors = 'Error loading logs: ' . $e->getMessage();
+    }
+
+    return response()->json([
+        'tables' => $status,
+        'recent_errors' => $recentErrors
+    ]);
 });
