@@ -224,18 +224,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/reports/aggregate',               [ReportController::class, 'aggregate']);
         Route::get('/stats',                          [AdminTenantController::class, 'stats']);
     });
+});
 
-    // Temporary Debug Route (Remove after fixing)
-    Route::get('/debug-db', function() {
-        $tables = ['permissions', 'roles', 'error_logs', 'users', 'tenants', 'activity_logs'];
-        $results = [];
-        foreach ($tables as $table) {
-            try {
-                $results[$table] = \Illuminate\Support\Facades\Schema::hasTable($table);
-            } catch (\Exception $e) {
-                $results[$table] = 'Error: ' . $e->getMessage();
-            }
+// Temporary Debug Route (Remove after fixing)
+Route::get('/debug-db', function() {
+    $tables = ['permissions', 'roles', 'error_logs', 'users', 'tenants', 'activity_logs'];
+    $results = [];
+    foreach ($tables as $table) {
+        try {
+            $results[$table] = \Illuminate\Support\Facades\Schema::hasTable($table);
+        } catch (\Exception $e) {
+            $results[$table] = 'Error: ' . $e->getMessage();
         }
-        return response()->json($results);
-    });
+    }
+    return response()->json($results);
 });
