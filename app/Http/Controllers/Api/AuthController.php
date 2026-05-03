@@ -191,6 +191,8 @@ class AuthController extends Controller
             ]);
         }
 
+        $role = \App\Models\Role::where('slug', $request->role)->first();
+        
         $user->update([
             'username' => $request->username,
             'full_name' => $request->full_name,
@@ -200,6 +202,7 @@ class AuthController extends Controller
             'phone' => $request->phone,
             'dob' => $request->dob,
             'role' => $request->role,
+            'role_id' => $role ? $role->id : null,
             'password' => Hash::make($request->password),
             'company_code' => $companyCode,
             'profile_completed' => true,

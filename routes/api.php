@@ -259,15 +259,30 @@ Route::get('/fix-db-schema', function () {
             }
         }
 
-        // 3. Fix Owner Permissions
-        $ownerRole = \App\Models\Role::where('slug', 'owner')->first();
-        if ($ownerRole) {
+        // 3. Fix Owner Permissions and Sync User Roles & Company Codes
+        $roles = \App\Models\Role::all()->keyBy('slug');
+        if (isset($roles['owner'])) {
             $ownerPerms = \App\Models\Permission::whereIn('resource', ['Menu', 'Pesanan', 'Laporan', 'User', 'Tenant'])
                 ->pluck('id');
-            $ownerRole->permissions()->sync($ownerPerms);
+            $roles['owner']->permissions()->sync($ownerPerms);
         }
 
-        return response()->json(['status' => 'success', 'message' => 'Sequences synced, Enum columns converted, and Owner permissions updated successfully.']);
+        // Sync users
+        foreach (\App\Models\User::all() as $user) {
+            // Check if user is actually a tenant owner
+            $tenant = \App\Models\Tenant::where('user_id', $user->id)->first();
+            if ($tenant) {
+                // Force role to owner if they have a tenant
+                $user->role = 'owner';
+                $user->company_code = $tenant->company_code;
+                $user->role_id = $roles['owner']->id ?? $user->role_id;
+                $user->save();
+            } else if (isset($roles[$user->role])) {
+                $user->update(['role_id' => $roles[$user->role]->id]);
+            }
+        }
+
+        return response()->json(['status' => 'success', 'message' => 'Sequences synced, Enum columns converted, and Owner data (Role & Company Code) synced successfully.']);
     } catch (\Exception $e) {
         return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
     }
