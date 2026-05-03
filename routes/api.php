@@ -273,6 +273,9 @@ Route::get('/debug-db', function () {
         if (\Illuminate\Support\Facades\Schema::hasTable('system_settings')) {
             $columns['system_settings'] = \Illuminate\Support\Facades\Schema::getColumnListing('system_settings');
         }
+        if (\Illuminate\Support\Facades\Schema::hasTable('orders')) {
+            $columns['orders'] = \Illuminate\Support\Facades\Schema::getColumnListing('orders');
+        }
     } catch (\Exception $e) {
         $recentErrors = 'Error: ' . $e->getMessage();
     }
@@ -293,8 +296,20 @@ Route::get('/debug-db', function () {
         $activeCarts = 'Error: ' . $e->getMessage();
     }
 
+    $allRecentOrders = [];
+    try {
+        if (\Illuminate\Support\Facades\Schema::hasTable('orders')) {
+            $allRecentOrders = \DB::table('orders')
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get();
+        }
+    } catch (\Exception $e) {
+        $allRecentOrders = 'Error: ' . $e->getMessage();
+    }
+
     return response()->json([
-        'active_carts' => $activeCarts,
+        'all_recent_orders' => $allRecentOrders,
         'update_sysad_photo' => $updateStatus,
         'recent_users' => $recentUsers,
         'tables' => $status,

@@ -25,6 +25,7 @@ class CheckoutController extends Controller
     {
         $request->validate(['notes' => 'nullable|string|max:500']);
 
+        /** @var Order|null $cart */
         $cart = Order::where('user_id', $request->user()->id)
             ->where('status', 'cart')
             ->with(['items.menu', 'tenant'])
