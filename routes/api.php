@@ -127,7 +127,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/profile', [AuthController::class, 'updateProfile']);
     Route::put('/auth/setup-profile', [AuthController::class, 'setupProfile']);
-    Route::put('/auth/change-password', [AuthController::class, 'changePassword']);
+    Route::put('/auth/password', [AuthController::class, 'changePassword']);
 
     // ─── TENANT PROFILE ─────────────────────────────
     Route::middleware(['tenant.active'])->group(function () {
