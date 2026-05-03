@@ -313,12 +313,17 @@ class AuthController extends Controller
             $user = User::where('email', $googleUser->getEmail())->first();
 
             if ($user) {
-                // Update google_id, ENSURE status is active (1)
-                $user->update([
+                $updateData = [
                     'google_id' => $googleUser->getId(),
-                    'photo' => $googleUser->getAvatar(),
-                    'status' => 1,
-                ]);
+                    'status'    => 1,
+                ];
+
+                // Only update photo if it's currently empty or already a Google URL
+                if (!$user->photo || str_contains($user->photo, 'googleusercontent.com')) {
+                    $updateData['photo'] = $googleUser->getAvatar();
+                }
+
+                $user->update($updateData);
             } else {
                 // Generate a unique username
                 $baseUsername = Str::slug(Str::before($googleUser->getEmail(), '@'));
