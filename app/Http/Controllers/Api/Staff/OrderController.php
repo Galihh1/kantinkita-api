@@ -21,8 +21,9 @@ class OrderController extends Controller
 
     public function index(Request $request)
     {
-        $tenant = $request->user()->staffTenants()->first();
-        if (!$tenant) return $this->error('Staff belum terhubung ke tenant.', 403);
+        $user = $request->user();
+        $tenant = $user->role === 'owner' ? $user->tenant : $user->staffTenants()->first();
+        if (!$tenant) return $this->error('Akses ditolak. Tenant tidak ditemukan.', 403);
 
         $orders = Order::with(['items.menu', 'user', 'payment'])
             ->where('tenant_id', $tenant->id)
@@ -40,7 +41,7 @@ class OrderController extends Controller
         $request->validate(['status' => 'required|in:processing,completed,cancelled']);
 
         $user   = $request->user();
-        $tenant = $user->staffTenants()->first();
+        $tenant = $user->role === 'owner' ? $user->tenant : $user->staffTenants()->first();
 
         $order = Order::where('id', $id)->where('tenant_id', $tenant->id)->firstOrFail();
 

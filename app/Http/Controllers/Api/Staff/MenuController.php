@@ -16,7 +16,17 @@ class MenuController extends Controller
 
     private function getTenant(Request $request)
     {
-        $tenant = $request->user()->staffTenants()->first();
+        $user = $request->user();
+        
+        // If owner, get the tenant they own
+        if ($user->role === 'owner') {
+            $tenant = $user->tenant;
+            if (!$tenant) abort(403, 'Data tenant Anda tidak ditemukan.');
+            return $tenant;
+        }
+
+        // If staff, get the tenant they are assigned to
+        $tenant = $user->staffTenants()->first();
         if (!$tenant) abort(403, 'Staff belum terhubung ke tenant.');
         return $tenant;
     }

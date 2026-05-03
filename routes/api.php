@@ -147,8 +147,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/orders/{id}', [CustomerOrderController::class, 'show']);
     });
 
-    // ─── STAFF ──────────────────────────────────────
-    Route::middleware(['role:staff', 'tenant.active'])->prefix('staff')->group(function () {
+    // ─── STAFF & OWNER (Management) ────────────────
+    Route::middleware(['role:staff,owner', 'tenant.active'])->prefix('staff')->group(function () {
         Route::get('/orders', [StaffOrderController::class, 'index'])->middleware('permission:read-pesanan');
         Route::put('/orders/{id}/status', [StaffOrderController::class, 'updateStatus'])->middleware('permission:update-pesanan');
         Route::get('/menus', [MenuController::class, 'index'])->middleware('permission:read-menu');
