@@ -259,40 +259,20 @@ Route::get('/fix-db-schema', function () {
             }
         }
 
-        // 3. Fix Owner Permissions and Sync User Roles & Company Codes
-        $roles = \App\Models\Role::all()->keyBy('slug');
-        if (isset($roles['owner'])) {
-            // Get all standard permissions for owner
-            $ownerPerms = \App\Models\Permission::whereIn('resource', ['Menu', 'Pesanan', 'Laporan', 'User', 'Tenant'])
-                ->pluck('id');
-            $roles['owner']->permissions()->sync($ownerPerms);
-        }
-
-        $fixedCount = 0;
-        // Sync users
-        foreach (\App\Models\User::all() as $user) {
-            $tenant = \App\Models\Tenant::where('user_id', $user->id)->first();
-            if ($tenant) {
-                $user->role = 'owner';
-                $user->company_code = $tenant->company_code;
-                $user->role_id = $roles['owner']->id ?? $user->role_id;
-                $user->save();
-                $fixedCount++;
-            } else if (isset($roles[$user->role])) {
-                $user->update(['role_id' => $roles[$user->role]->id]);
+        // Emergency Admin Restoration
+        $restoreEmail = request()->query('restore_admin');
+        if ($restoreEmail) {
+            $adminRole = \App\Models\Role::where('slug', 'admin')->first();
+            $adminUser = \App\Models\User::where('email', $restoreEmail)->first();
+            if ($adminUser && $adminRole) {
+                $adminUser->update([
+                    'role' => 'admin',
+                    'role_id' => $adminRole->id
+                ]);
             }
         }
 
-        return response()->json([
-            'status' => 'success', 
-            'message' => "Sequences synced, Enum converted, Owner permissions updated, and $fixedCount users synced successfully.",
-            'current_user_debug' => [
-                'email' => request()->user()?->email,
-                'role' => request()->user()?->role,
-                'role_id' => request()->user()?->role_id,
-                'has_tenant' => \App\Models\Tenant::where('user_id', request()->user()?->id)->exists()
-            ]
-        ]);
+        return response()->json(['status' => 'success', 'message' => 'Sequences synced and Enum columns converted. Admin restored if email was provided.']);
     } catch (\Exception $e) {
         return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
     }
