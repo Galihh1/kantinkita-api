@@ -22,33 +22,45 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📦 Pengajuan Paket Baru</h1>
-            <p>Ada tenant yang mengajukan langganan</p>
+            <h1>Langganan Disetujui</h1>
+            <p>Selamat! Paket langganan Anda telah aktif</p>
         </div>
         <div class="body">
+            <p style="color: #374151; font-size: 14px; line-height: 1.6;">
+                Halo <strong>{{ $tenant->owner->full_name ?? $tenant->tenant_name }}</strong>,
+                langganan paket <strong>{{ ucfirst($subscription->plan) }}</strong> untuk kantin
+                <strong>{{ $tenant->tenant_name }}</strong> telah disetujui oleh Admin.
+            </p>
             <div class="info-card">
                 <div class="info-row">
-                    <span class="info-label">Tenant</span>
-                    <span class="info-value">{{ $tenant->tenant_name }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Owner</span>
-                    <span class="info-value">{{ $tenant->owner->full_name ?? '-' }}</span>
+                    <span class="info-label">Nomor Invoice</span>
+                    <span class="info-value">{{ $subscription->invoice_number }}</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Paket</span>
-                    <span class="info-value">{{ ucfirst($plan) }}</span>
+                    <span class="info-value">{{ ucfirst($subscription->plan) }}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Harga</span>
-                    <span class="info-value">Rp {{ number_format($amount, 0, ',', '.') }}</span>
+                    <span class="info-label">Mulai Aktif</span>
+                    <span class="info-value">{{ \Carbon\Carbon::parse($subscription->billing_start)->format('d M Y') }}</span>
                 </div>
+                <div class="info-row">
+                    <span class="info-label">Berlaku Hingga</span>
+                    <span class="info-value">{{ \Carbon\Carbon::parse($subscription->billing_end)->format('d M Y') }}</span>
+                </div>
+                @if($subscription->admin_notes)
+                <div class="info-row">
+                    <span class="info-label">Catatan Admin</span>
+                    <span class="info-value">{{ $subscription->admin_notes }}</span>
+                </div>
+                @endif
             </div>
             <p style="color: #6b7280; font-size: 13px; line-height: 1.6;">
-                Silakan login ke dashboard Admin untuk meninjau dan menyetujui pengajuan ini setelah pembayaran dikonfirmasi.
+                Anda sekarang dapat menggunakan seluruh fitur KantinKita sesuai paket yang dipilih.
+                Login ke dashboard Owner untuk mulai mengelola menu dan pesanan.
             </p>
             <div class="cta">
-                <a href="{{ config('app.frontend_url', 'https://kantinkita-frontend-production.up.railway.app') }}/admin">Buka Dashboard Admin</a>
+                <a href="{{ config('app.frontend_url', 'https://kantinkita-frontend-production.up.railway.app') }}/owner">Buka Dashboard Owner</a>
             </div>
         </div>
         <div class="footer">

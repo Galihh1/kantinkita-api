@@ -5,6 +5,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Subscription;
 use App\Models\ActivityLog;
 use App\Models\User;
+use App\Services\GmailService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -60,6 +61,20 @@ class SubscriptionController extends Controller
 
         ActivityLog::record('update', "Admin menyetujui langganan #{$subscription->id} untuk tenant: {$subscription->tenant->tenant_name} ({$months} bulan)");
 
+        // Notifikasi email ke Owner
+        $owner = $subscription->tenant->owner;
+        if ($owner?->email) {
+            app(GmailService::class)->sendSilently(
+                $owner->email,
+                'Langganan KantinKita Anda Telah Disetujui',
+                view('emails.subscription-approved', [
+                    'tenant'       => $subscription->tenant,
+                    'subscription' => $subscription->fresh(),
+                ])->render(),
+                'admin.subscription.approve'
+            );
+        }
+
         return $this->success($subscription->fresh()->load('tenant.owner'), 'Langganan berhasil disetujui');
     }
 
@@ -83,6 +98,20 @@ class SubscriptionController extends Controller
         ]);
 
         ActivityLog::record('update', "Admin menolak langganan #{$subscription->id} untuk tenant: {$subscription->tenant->tenant_name}");
+
+        // Notifikasi email ke Owner
+        $owner = $subscription->tenant->owner;
+        if ($owner?->email) {
+            app(GmailService::class)->sendSilently(
+                $owner->email,
+                'Pengajuan Langganan KantinKita Tidak Dapat Disetujui',
+                view('emails.subscription-rejected', [
+                    'tenant'       => $subscription->tenant,
+                    'subscription' => $subscription->fresh(),
+                ])->render(),
+                'admin.subscription.reject'
+            );
+        }
 
         return $this->success($subscription->fresh()->load('tenant.owner'), 'Langganan ditolak');
     }
