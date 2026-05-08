@@ -73,7 +73,8 @@ class UserController extends Controller
             'email'     => "sometimes|email|unique:users,email,{$id}",
             'role'      => 'sometimes|in:admin,owner,staff,customer',
             'status'    => 'sometimes|boolean',
-            'permissions' => 'nullable|array',
+            'password'  => 'sometimes|nullable|string|min:8',
+            'permissions'   => 'nullable|array',
             'permissions.*' => 'exists:permissions,id',
         ]);
 
@@ -82,7 +83,6 @@ class UserController extends Controller
         $data['updated_by'] = $request->user()->username;
 
         if ($request->filled('password')) {
-            $request->validate(['password' => 'min:8']);
             $data['password'] = Hash::make($request->password);
         }
 

@@ -20,18 +20,25 @@ class PaymentController extends Controller
         try {
             $payload = $request->all();
 
-            if (isset($payload['signature_key'])) {
-                $isValid = $this->midtrans->verifySignature(
-                    $payload['order_id'] ?? '',
-                    $payload['status_code'] ?? '',
-                    $payload['gross_amount'] ?? '',
-                    $payload['signature_key']
-                );
+            // Signature WAJIB ada — tolak semua request tanpa signature
+            if (empty($payload['signature_key'])) {
+                Log::warning('Midtrans webhook rejected: missing signature_key', [
+                    'order_id' => $payload['order_id'] ?? 'unknown',
+                    'ip'       => $request->ip(),
+                ]);
+                return response()->json(['status' => 'missing_signature'], 400);
+            }
 
-                if (!$isValid) {
-                    Log::warning('Invalid Midtrans signature', ['order_id' => $payload['order_id'] ?? '']);
-                    return response()->json(['status' => 'invalid_signature'], 400);
-                }
+            $isValid = $this->midtrans->verifySignature(
+                $payload['order_id'] ?? '',
+                $payload['status_code'] ?? '',
+                $payload['gross_amount'] ?? '',
+                $payload['signature_key']
+            );
+
+            if (!$isValid) {
+                Log::warning('Invalid Midtrans signature', ['order_id' => $payload['order_id'] ?? '']);
+                return response()->json(['status' => 'invalid_signature'], 400);
             }
 
             $this->midtrans->processNotification($payload);

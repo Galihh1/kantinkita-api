@@ -46,55 +46,7 @@ Route::get('/health', function () {
     ]);
 });
 
-// ═══════════════════════════
-// GMAIL DEBUG (Temporary - Remove After Fix)
-// ═══════════════════════════
-Route::get('/debug/gmail', function () {
-    $clientId = config('services.gmail.client_id');
-    $clientSecret = config('services.gmail.client_secret');
-    $refreshToken = config('services.gmail.refresh_token');
-    $fromEmail = config('services.gmail.from_email');
 
-    // Check env vars exist
-    if (!$clientId || !$clientSecret || !$refreshToken) {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Missing Gmail environment variables',
-            'has_client_id' => !empty($clientId),
-            'has_client_secret' => !empty($clientSecret),
-            'has_refresh_token' => !empty($refreshToken),
-            'has_from_email' => !empty($fromEmail),
-        ]);
-    }
-
-    try {
-        $client = new \Google\Client();
-        $client->setClientId($clientId);
-        $client->setClientSecret($clientSecret);
-        $result = $client->refreshToken($refreshToken);
-
-        if (isset($result['error'])) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Refresh token failed: ' . $result['error_description'] ?? $result['error'],
-            ]);
-        }
-
-        return response()->json([
-            'status' => 'ok',
-            'message' => 'Gmail credentials valid. Token refreshed successfully.',
-            'from_email' => $fromEmail,
-            'token_type' => $result['token_type'] ?? 'unknown',
-            'expires_in' => $result['expires_in'] ?? 'unknown',
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => $e->getMessage(),
-            'class' => get_class($e),
-        ]);
-    }
-});
 
 
 // ═══════════════════════════
@@ -225,53 +177,37 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/stats', [AdminTenantController::class, 'stats']);
     });
 });
-// 1. Perbaikan Struktur DB (Tanpa menyentuh User)
-Route::get('/fix-db-schema', function () {
-    try {
-        // Reset sequences (PKEY)
-        $tables = ['users', 'tenants', 'categories', 'menus', 'orders', 'order_items', 'subscriptions'];
-        foreach ($tables as $table) {
-            $maxId = \DB::table($table)->max('id') ?? 0;
-            $seqName = "{$table}_id_seq";
-            try { \DB::statement("SELECT setval('$seqName', $maxId + 1, false)"); } catch (\Exception $e) {}
-        }
 
-        // Fix Subscription Columns
-        if (\Schema::hasTable('subscriptions')) {
-            \DB::statement("ALTER TABLE subscriptions ALTER COLUMN billing_status TYPE VARCHAR(50)");
-            \DB::statement("ALTER TABLE subscriptions ALTER COLUMN billing_status SET DEFAULT 'pending'");
-            \DB::statement("ALTER TABLE subscriptions ALTER COLUMN billing_start DROP NOT NULL");
-            \DB::statement("ALTER TABLE subscriptions ALTER COLUMN billing_end DROP NOT NULL");
-            if (\Schema::hasColumn('subscriptions', 'approval_status')) {
-                \DB::statement("ALTER TABLE subscriptions ALTER COLUMN approval_status TYPE VARCHAR(50)");
-            }
-        }
-        return response()->json(['status' => 'success', 'message' => 'Struktur database berhasil diperbaiki.']);
-    } catch (\Exception $e) {
-        return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
-    }
-});
-
-// 2. Sinkronisasi Mandiri untuk Owner (Aman, hanya untuk user yang sedang login)
-Route::middleware('auth:sanctum')->get('/owner/sync-my-role', function () {
+// ═══════════════════════════
+// OWNER ACCOUNT SYNC (Best Practice)
+// Hanya bisa dipanggil oleh Owner yang login.
+// Memperbaiki role_id user agar permissions muncul di sidebar.
+// Gunakan setelah admin menyetujui pendaftaran atau jika menu tidak muncul.
+// ═══════════════════════════
+Route::middleware('auth:sanctum')->post('/owner/sync-my-role', function () {
     $user = request()->user();
-    $ownerRole = \App\Models\Role::where('slug', 'owner')->first();
-    
-    // Pastikan user ini memang punya tenant (Owner sah)
-    $hasTenant = \App\Models\Tenant::where('user_id', $user->id)->exists();
-    
-    if ($hasTenant && $ownerRole) {
-        $user->update([
-            'role' => 'owner',
-            'role_id' => $ownerRole->id
-        ]);
-        
-        // Sync permissions owner juga
-        $ownerPerms = \App\Models\Permission::whereIn('resource', ['Menu', 'Pesanan', 'Laporan', 'User', 'Tenant'])->pluck('id');
-        $ownerRole->permissions()->sync($ownerPerms);
-        
-        return response()->json(['status' => 'success', 'message' => 'Akun Owner Anda berhasil disinkronkan. Silakan Logout dan Login kembali.']);
+
+    if ($user->role !== 'owner') {
+        return response()->json(['status' => false, 'message' => 'Akses ditolak. Hanya Owner yang dapat melakukan sinkronisasi ini.'], 403);
     }
-    
-    return response()->json(['status' => 'error', 'message' => 'Anda tidak terdeteksi sebagai pemilik kantin.'], 403);
+
+    $hasTenant = \App\Models\Tenant::where('user_id', $user->id)->where('is_deleted', 0)->exists();
+    if (!$hasTenant) {
+        return response()->json(['status' => false, 'message' => 'Anda tidak terdaftar sebagai pemilik kantin aktif.'], 403);
+    }
+
+    $ownerRole = \App\Models\Role::where('slug', 'owner')->first();
+    if (!$ownerRole) {
+        return response()->json(['status' => false, 'message' => 'Konfigurasi role Owner tidak ditemukan. Hubungi administrator.'], 500);
+    }
+
+    $user->update(['role_id' => $ownerRole->id]);
+
+    \App\Models\ActivityLog::record('sync_role', 'Owner melakukan sinkronisasi akun secara mandiri.');
+
+    return response()->json([
+        'status'  => true,
+        'message' => 'Akun berhasil disinkronkan. Silakan Logout dan Login kembali untuk memperbarui menu.',
+        'data'    => ['role_id' => $ownerRole->id, 'role' => 'owner'],
+    ]);
 });

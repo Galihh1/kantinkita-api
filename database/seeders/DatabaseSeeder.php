@@ -218,24 +218,40 @@ class DatabaseSeeder extends Seeder
 
         // ─── 5. SYSTEM SETTINGS ────────────────────────────────
         $settings = [
-            ['key' => 'app_name',           'value' => 'KantinKita',          'type' => 'string',  'group' => 'general',  'label' => 'Nama Aplikasi'],
-            ['key' => 'app_logo',           'value' => null,                  'type' => 'string',  'group' => 'general',  'label' => 'Logo Aplikasi'],
-            ['key' => 'fee_type',           'value' => 'percentage',          'type' => 'string',  'group' => 'payment',  'label' => 'Tipe Fee (percentage/fixed)'],
-            ['key' => 'fee_value',          'value' => '5',                   'type' => 'float',   'group' => 'payment',  'label' => 'Nilai Fee'],
-            ['key' => 'fee_label',          'value' => 'Biaya Layanan',       'type' => 'string',  'group' => 'payment',  'label' => 'Label Fee'],
-            ['key' => 'payment_timeout',    'value' => '30',                  'type' => 'integer', 'group' => 'payment',  'label' => 'Timeout Pembayaran (menit)'],
+            // General
+            ['key' => 'app_name',           'value' => 'KantinKita',          'type' => 'string',  'group' => 'general',      'label' => 'Nama Aplikasi'],
+            ['key' => 'app_logo',           'value' => null,                  'type' => 'string',  'group' => 'general',      'label' => 'Logo Aplikasi'],
+            ['key' => 'support_email',      'value' => 'admin@kantinkita.com','type' => 'string',  'group' => 'general',      'label' => 'Email Support'],
+            ['key' => 'support_phone',      'value' => '081200000000',        'type' => 'string',  'group' => 'general',      'label' => 'No. Telepon Support'],
+            ['key' => 'maintenance_mode',   'value' => 'false',               'type' => 'string',  'group' => 'general',      'label' => 'Mode Maintenance'],
+            // Payment
+            ['key' => 'fee_type',           'value' => 'percentage',          'type' => 'string',  'group' => 'payment',      'label' => 'Tipe Fee (percentage/fixed)'],
+            ['key' => 'fee_value',          'value' => '5',                   'type' => 'float',   'group' => 'payment',      'label' => 'Nilai Fee'],
+            ['key' => 'fee_label',          'value' => 'Biaya Layanan',       'type' => 'string',  'group' => 'payment',      'label' => 'Label Fee'],
+            ['key' => 'payment_timeout',    'value' => '30',                  'type' => 'integer', 'group' => 'payment',      'label' => 'Timeout Pembayaran (menit)'],
+            ['key' => 'min_order_amount',   'value' => '0',                   'type' => 'integer', 'group' => 'payment',      'label' => 'Minimal Order Default (Rp)'],
+            ['key' => 'midtrans_mode',      'value' => 'sandbox',             'type' => 'string',  'group' => 'payment',      'label' => 'Midtrans Environment'],
+            // Subscription
             ['key' => 'trial_days',         'value' => '14',                  'type' => 'integer', 'group' => 'subscription', 'label' => 'Masa Trial (hari)'],
             ['key' => 'price_starter',      'value' => '99000',               'type' => 'integer', 'group' => 'subscription', 'label' => 'Harga Paket Starter'],
             ['key' => 'price_professional', 'value' => '299000',              'type' => 'integer', 'group' => 'subscription', 'label' => 'Harga Paket Professional'],
             ['key' => 'price_enterprise',   'value' => '799000',              'type' => 'integer', 'group' => 'subscription', 'label' => 'Harga Paket Enterprise'],
-            ['key' => 'notif_order_created',   'value' => '1', 'type' => 'boolean', 'group' => 'notification', 'label' => 'Notif Order Dibuat'],
-            ['key' => 'notif_order_paid',      'value' => '1', 'type' => 'boolean', 'group' => 'notification', 'label' => 'Notif Order Dibayar'],
-            ['key' => 'notif_order_processing','value' => '1', 'type' => 'boolean', 'group' => 'notification', 'label' => 'Notif Order Diproses'],
-            ['key' => 'notif_order_completed', 'value' => '1', 'type' => 'boolean', 'group' => 'notification', 'label' => 'Notif Order Selesai'],
+            ['key' => 'plan_starter_features',      'value' => '100 Orders/bulan,50 Menu,2 Staff Accounts,Basic Reporting',               'type' => 'string', 'group' => 'subscription', 'label' => 'Fitur Paket Starter'],
+            ['key' => 'plan_professional_features', 'value' => 'Unlimited Orders,Unlimited Menu,10 Staff Accounts,Advanced Reporting,Priority Support', 'type' => 'string', 'group' => 'subscription', 'label' => 'Fitur Paket Professional'],
+            ['key' => 'plan_enterprise_features',   'value' => 'Custom Limit,Custom Domain,Unlimited Staff,Dedicated Account Manager,API Access', 'type' => 'string', 'group' => 'subscription', 'label' => 'Fitur Paket Enterprise'],
+            // Notifications
+            ['key' => 'notif_order_created',    'value' => '1', 'type' => 'boolean', 'group' => 'notification', 'label' => 'Notif Order Dibuat'],
+            ['key' => 'notif_order_paid',        'value' => '1', 'type' => 'boolean', 'group' => 'notification', 'label' => 'Notif Order Dibayar'],
+            ['key' => 'notif_order_processing',  'value' => '1', 'type' => 'boolean', 'group' => 'notification', 'label' => 'Notif Order Diproses'],
+            ['key' => 'notif_order_completed',   'value' => '1', 'type' => 'boolean', 'group' => 'notification', 'label' => 'Notif Order Selesai'],
         ];
 
         foreach ($settings as $setting) {
-            SystemSetting::create(array_merge($setting, ['company_code' => 'UNIV', 'created_by' => 'system', 'updated_by' => 'system']));
+            // firstOrCreate agar aman dijalankan ulang di database yang sudah ada datanya
+            SystemSetting::firstOrCreate(
+                ['key' => $setting['key']],
+                array_merge($setting, ['group_name' => $setting['group'], 'company_code' => 'UNIV', 'created_by' => 'system', 'updated_by' => 'system'])
+            );
         }
 
         $this->command->info('✅ KantinKita database seeded successfully!');

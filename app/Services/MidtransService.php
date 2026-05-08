@@ -10,11 +10,14 @@ use App\Models\SystemSetting;
 
 class MidtransService
 {
+    private bool $isProduction;
+
     public function __construct()
     {
         Config::$serverKey    = config('services.midtrans.server_key');
         Config::$clientKey    = config('services.midtrans.client_key');
-        Config::$isProduction = config('services.midtrans.mode') === 'production';
+        $this->isProduction   = config('services.midtrans.mode') === 'production';
+        Config::$isProduction = $this->isProduction;
         Config::$isSanitized  = true;
         Config::$is3ds        = true;
     }
@@ -74,7 +77,7 @@ class MidtransService
             ]
         );
 
-        $isProduction = config('services.midtrans.mode') === 'production';
+        $isProduction = $this->isProduction;
         return [
             'snap_token'  => $snapToken,
             'payment_url' => $isProduction

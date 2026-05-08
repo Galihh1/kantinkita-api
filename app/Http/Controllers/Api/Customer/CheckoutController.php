@@ -38,9 +38,10 @@ class CheckoutController extends Controller
             if (!$tenant->status) return $this->error('Tenant tidak aktif.', 422);
             if (!$tenant->is_open)   return $this->error('Tenant sedang tutup.', 422);
 
-            // Create or get cart
+            // Create or get cart — diisolasi per user DAN per tenant
             $cart = Order::where('user_id', $request->user()->id)
-                ->where('status', 'cart')
+                ->where('status', Order::STATUS_CART)
+                ->where('tenant_id', $tenant->id)
                 ->first();
 
             if (!$cart) {

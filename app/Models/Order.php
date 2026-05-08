@@ -23,6 +23,7 @@ class Order extends BaseModel
     const STATUS_EXPIRED    = 'expired';
     const STATUS_CANCELLED  = 'cancelled';
     const STATUS_REFUNDED   = 'refunded';
+    const STATUS_CART       = 'cart';
 
     const VALID_TRANSITIONS = [
         self::STATUS_PENDING    => [self::STATUS_EXPIRED, self::STATUS_CANCELLED],

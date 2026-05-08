@@ -30,7 +30,7 @@ class ActivityLog extends Model
             'description'  => $finalDescription,
             'method'       => request()->method(),
             'url'          => request()->fullUrl(),
-            'status_code'  => $status ?? (isset($GLOBALS['response_status']) ? $GLOBALS['response_status'] : 200),
+            'status_code'  => $status ?? 200,
             'ip_address'   => request()->ip(),
             'user_agent'   => request()->userAgent(),
             'company_code' => 'UNIV',

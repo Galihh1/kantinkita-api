@@ -7,6 +7,7 @@ use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\User;
 use App\Models\Tenant;
 use App\Models\ActivityLog;
+use App\Services\GmailService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -15,11 +16,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
-use App\Mail\OtpMail;
-use App\Mail\ResetPasswordMail;
 
 
 class AuthController extends Controller
@@ -214,31 +212,12 @@ class AuthController extends Controller
 
         // For owner: send company code email
         if ($request->role === 'owner' && $tenant) {
-            try {
-                $client = new \Google\Client();
-                $client->setClientId(config('services.gmail.client_id'));
-                $client->setClientSecret(config('services.gmail.client_secret'));
-                $client->refreshToken(config('services.gmail.refresh_token'));
-                
-                $service = new \Google\Service\Gmail($client);
-                $fromEmail = config('services.gmail.from_email', 'pangestu5711@gmail.com');
-                $htmlBody = view('emails.tenant-registered', ['user' => $freshUser, 'tenant' => $tenant, 'companyCode' => $companyCode])->render();
-                
-                $rawMessage = "From: KantinKita <{$fromEmail}>\r\n";
-                $rawMessage .= "To: {$freshUser->email}\r\n";
-                $rawMessage .= "Subject: Selamat Datang di KantinKita - Tenant Berhasil Dibuat\r\n";
-                $rawMessage .= "MIME-Version: 1.0\r\n";
-                $rawMessage .= "Content-Type: text/html; charset=utf-8\r\n\r\n";
-                $rawMessage .= $htmlBody;
-
-                $encodedMessage = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($rawMessage));
-                $message = new \Google\Service\Gmail\Message();
-                $message->setRaw($encodedMessage);
-                
-                $service->users_messages->send('me', $message);
-            } catch (\Exception $e) {
-                Log::warning('Failed to send tenant registration email via Gmail API: ' . $e->getMessage());
-            }
+            app(GmailService::class)->sendSilently(
+                $freshUser->email,
+                'Selamat Datang di KantinKita - Tenant Berhasil Dibuat',
+                view('emails.tenant-registered', ['user' => $freshUser, 'tenant' => $tenant, 'companyCode' => $companyCode])->render(),
+                'setupProfile'
+            );
         }
 
         $responseData = $freshUser->toArray();
@@ -370,40 +349,13 @@ class AuthController extends Controller
                 'otp' => $otp
             ], now()->addMinutes(10));
 
-            // Kirim Email menggunakan Gmail API (Official HTTPS)
-            try {
-                $client = new \Google\Client();
-                $client->setClientId(config('services.gmail.client_id'));
-                $client->setClientSecret(config('services.gmail.client_secret'));
-                $client->refreshToken(config('services.gmail.refresh_token'));
-                
-                $service = new \Google\Service\Gmail($client);
-                
-                $fromEmail = config('services.gmail.from_email', 'pangestu5711@gmail.com');
-                $htmlBody = view('emails.otp', ['user' => $user, 'otp' => $otp])->render();
-                
-                $rawMessage = "From: KantinKita <{$fromEmail}>\r\n";
-                $rawMessage .= "To: {$user->email}\r\n";
-                $rawMessage .= "Subject: Kode OTP KantinKita\r\n";
-                $rawMessage .= "MIME-Version: 1.0\r\n";
-                $rawMessage .= "Content-Type: text/html; charset=utf-8\r\n\r\n";
-                $rawMessage .= $htmlBody;
-
-                $encodedMessage = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($rawMessage));
-                $message = new \Google\Service\Gmail\Message();
-                $message->setRaw($encodedMessage);
-                
-                $service->users_messages->send('me', $message);
-            } catch (\Exception $e) {
-                \Log::error('GMAIL_API_ERROR [handleGoogleCallback]: ' . $e->getMessage(), [
-                    'exception_class' => get_class($e),
-                    'user_email'      => $user->email,
-                    'has_client_id'   => !empty(env('GMAIL_CLIENT_ID')),
-                    'has_secret'      => !empty(env('GMAIL_CLIENT_SECRET')),
-                    'has_refresh'     => !empty(env('GMAIL_REFRESH_TOKEN')),
-                    'trace'           => $e->getTraceAsString(),
-                ]);
-            }
+            // Kirim OTP via GmailService
+            app(GmailService::class)->sendSilently(
+                $user->email,
+                'Kode OTP KantinKita',
+                view('emails.otp', ['user' => $user, 'otp' => $otp])->render(),
+                'handleGoogleCallback'
+            );
 
             ActivityLog::record('login_attempt', "OTP dikirim ke: {$user->email}", $user->id);
 
@@ -473,43 +425,18 @@ class AuthController extends Controller
             'otp'     => $otp
         ], now()->addMinutes(10));
 
-        // Kirim Email
+        // Kirim OTP baru via GmailService
         $user = User::find($cached['user_id']);
         try {
-            $client = new \Google\Client();
-            $client->setClientId(config('services.gmail.client_id'));
-            $client->setClientSecret(config('services.gmail.client_secret'));
-            $client->refreshToken(config('services.gmail.refresh_token'));
-            
-            $service = new \Google\Service\Gmail($client);
-            
-            $fromEmail = config('services.gmail.from_email', 'pangestu5711@gmail.com');
-            $htmlBody = view('emails.otp', ['user' => $user, 'otp' => $otp])->render();
-            
-            $rawMessage = "From: KantinKita <{$fromEmail}>\r\n";
-            $rawMessage .= "To: {$user->email}\r\n";
-            $rawMessage .= "Subject: Kode OTP KantinKita (Kirim Ulang)\r\n";
-            $rawMessage .= "MIME-Version: 1.0\r\n";
-            $rawMessage .= "Content-Type: text/html; charset=utf-8\r\n\r\n";
-            $rawMessage .= $htmlBody;
-
-            $encodedMessage = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($rawMessage));
-            $message = new \Google\Service\Gmail\Message();
-            $message->setRaw($encodedMessage);
-            
-            $service->users_messages->send('me', $message);
-
+            app(GmailService::class)->send(
+                $user->email,
+                'Kode OTP KantinKita (Kirim Ulang)',
+                view('emails.otp', ['user' => $user, 'otp' => $otp])->render()
+            );
             ActivityLog::record('resend_otp', "OTP dikirim ulang ke: {$user->email}", $user->id);
             return $this->success(null, 'Kode OTP baru telah dikirim ke email Anda.');
         } catch (\Exception $e) {
-            \Log::error('GMAIL_API_ERROR [resendGoogleOtp]: ' . $e->getMessage(), [
-                'exception_class' => get_class($e),
-                'user_email'      => $user->email ?? 'unknown',
-                'has_client_id'   => !empty(env('GMAIL_CLIENT_ID')),
-                'has_secret'      => !empty(env('GMAIL_CLIENT_SECRET')),
-                'has_refresh'     => !empty(env('GMAIL_REFRESH_TOKEN')),
-                'trace'           => $e->getTraceAsString(),
-            ]);
+            Log::error('GMAIL_API_ERROR [resendGoogleOtp]: ' . $e->getMessage(), ['user_email' => $user->email ?? 'unknown']);
             return $this->error('Gagal mengirim email. Detail: ' . $e->getMessage(), 500);
         }
     }
@@ -536,31 +463,13 @@ class AuthController extends Controller
             ]
         );
 
-        // Send Email
+        // Kirim email reset password via GmailService
         try {
-            $client = new \Google\Client();
-            $client->setClientId(config('services.gmail.client_id'));
-            $client->setClientSecret(config('services.gmail.client_secret'));
-            $client->refreshToken(config('services.gmail.refresh_token'));
-            
-            $service = new \Google\Service\Gmail($client);
-            
-            $fromEmail = config('services.gmail.from_email', 'pangestu5711@gmail.com');
-            $htmlBody = view('emails.reset_password', ['user' => $user, 'token' => $token])->render();
-            
-            $rawMessage = "From: KantinKita <{$fromEmail}>\r\n";
-            $rawMessage .= "To: {$user->email}\r\n";
-            $rawMessage .= "Subject: Reset Password KantinKita\r\n";
-            $rawMessage .= "MIME-Version: 1.0\r\n";
-            $rawMessage .= "Content-Type: text/html; charset=utf-8\r\n\r\n";
-            $rawMessage .= $htmlBody;
-
-            $encodedMessage = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($rawMessage));
-            $message = new \Google\Service\Gmail\Message();
-            $message->setRaw($encodedMessage);
-            
-            $service->users_messages->send('me', $message);
-
+            app(GmailService::class)->send(
+                $user->email,
+                'Reset Password KantinKita',
+                view('emails.reset_password', ['user' => $user, 'token' => $token])->render()
+            );
             ActivityLog::record('forgot_password', "Request reset password untuk: {$user->email}", $user->id);
             return $this->success(null, 'Instruksi reset password telah dikirim ke email Anda.');
         } catch (\Exception $e) {

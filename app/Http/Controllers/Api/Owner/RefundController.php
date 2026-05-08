@@ -33,10 +33,6 @@ class RefundController extends Controller
             return $this->error('Order tidak dapat direfund. Status saat ini: ' . $order->status, 422);
         }
 
-        if ($order->status === Order::STATUS_REFUNDED) {
-            return $this->error('Order sudah pernah direfund.', 422);
-        }
-
         $payment = $order->payment;
         if (!$payment || !$payment->transaction_id) {
             return $this->error('Data pembayaran tidak ditemukan.', 404);

@@ -6,9 +6,9 @@ use App\Models\Subscription;
 use App\Models\SystemSetting;
 use App\Models\ActivityLog;
 use App\Models\User;
+use App\Services\GmailService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 
 class SubscriptionController extends Controller
@@ -82,35 +82,15 @@ class SubscriptionController extends Controller
 
         ActivityLog::record('create', "Owner mengajukan paket {$request->plan} untuk tenant: {$tenant->tenant_name}");
 
-        // Send notification email to admins
-        try {
-            $client = new \Google\Client();
-            $client->setClientId(config('services.gmail.client_id'));
-            $client->setClientSecret(config('services.gmail.client_secret'));
-            $client->refreshToken(config('services.gmail.refresh_token'));
-            
-            $service = new \Google\Service\Gmail($client);
-            $fromEmail = config('services.gmail.from_email', 'pangestu5711@gmail.com');
-            
-            $admins = User::where('role', 'admin')->where('status', 1)->where('is_deleted', 0)->get();
-            foreach ($admins as $admin) {
-                $htmlBody = view('emails.package-requested', ['tenant' => $tenant, 'plan' => $request->plan, 'amount' => $prices[$request->plan]])->render();
-                
-                $rawMessage = "From: KantinKita <{$fromEmail}>\r\n";
-                $rawMessage .= "To: {$admin->email}\r\n";
-                $rawMessage .= "Subject: Pengajuan Paket Baru: {$request->plan}\r\n";
-                $rawMessage .= "MIME-Version: 1.0\r\n";
-                $rawMessage .= "Content-Type: text/html; charset=utf-8\r\n\r\n";
-                $rawMessage .= $htmlBody;
-
-                $encodedMessage = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($rawMessage));
-                $message = new \Google\Service\Gmail\Message();
-                $message->setRaw($encodedMessage);
-                
-                $service->users_messages->send('me', $message);
-            }
-        } catch (\Exception $e) {
-            Log::warning('Failed to send package request email via Gmail API: ' . $e->getMessage());
+        // Notifikasi email ke semua admin via GmailService
+        $admins = User::where('role', 'admin')->where('status', 1)->where('is_deleted', 0)->get();
+        foreach ($admins as $admin) {
+            app(GmailService::class)->sendSilently(
+                $admin->email,
+                "Pengajuan Paket Baru: {$request->plan}",
+                view('emails.package-requested', ['tenant' => $tenant, 'plan' => $request->plan, 'amount' => $prices[$request->plan]])->render(),
+                'owner.subscribe'
+            );
         }
 
         return $this->success($subscription, 'Pengajuan paket berhasil dikirim. Menunggu persetujuan admin.', 201);
@@ -130,28 +110,32 @@ class SubscriptionController extends Controller
 
     public function plans()
     {
+        // Fitur paket dibaca dari system_settings agar bisa diubah dari frontend
+        $parseFeatures = fn(string $key, string $default) =>
+            array_map('trim', explode(',', SystemSetting::get($key, $default)));
+
         $plans = [
             [
-                'id' => 'starter',
-                'name' => 'Starter',
-                'price' => (int) SystemSetting::get('price_starter', 99000),
+                'id'             => 'starter',
+                'name'           => 'Starter',
+                'price'          => (int) SystemSetting::get('price_starter', 99000),
                 'is_recommended' => false,
-                'features' => ['100 Orders/bulan', '50 Menu', '2 Staff Accounts', 'Basic Reporting']
+                'features'       => $parseFeatures('plan_starter_features', '100 Orders/bulan,50 Menu,2 Staff Accounts,Basic Reporting'),
             ],
             [
-                'id' => 'professional',
-                'name' => 'Professional',
-                'price' => (int) SystemSetting::get('price_professional', 299000),
+                'id'             => 'professional',
+                'name'           => 'Professional',
+                'price'          => (int) SystemSetting::get('price_professional', 299000),
                 'is_recommended' => true,
-                'features' => ['Unlimited Orders', 'Unlimited Menu', '10 Staff Accounts', 'Advanced Reporting', 'Priority Support']
+                'features'       => $parseFeatures('plan_professional_features', 'Unlimited Orders,Unlimited Menu,10 Staff Accounts,Advanced Reporting,Priority Support'),
             ],
             [
-                'id' => 'enterprise',
-                'name' => 'Enterprise',
-                'price' => (int) SystemSetting::get('price_enterprise', 799000),
+                'id'             => 'enterprise',
+                'name'           => 'Enterprise',
+                'price'          => (int) SystemSetting::get('price_enterprise', 799000),
                 'is_recommended' => false,
-                'features' => ['Custom Limit', 'Custom Domain', 'Unlimited Staff', 'Dedicated Account Manager', 'API Access']
-            ]
+                'features'       => $parseFeatures('plan_enterprise_features', 'Custom Limit,Custom Domain,Unlimited Staff,Dedicated Account Manager,API Access'),
+            ],
         ];
 
         return $this->success($plans);

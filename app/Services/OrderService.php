@@ -18,11 +18,11 @@ class OrderService
 
     public function generateOrderNumber(): string
     {
-        $date      = now()->format('Ymd');
-        $lastOrder = Order::whereDate('created_at', today())->orderByDesc('id')->first();
-        $sequence  = $lastOrder ? (int) substr($lastOrder->order_number, -4) + 1 : 1;
-
-        return 'INV/' . $date . '/' . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+        // Gunakan random suffix (uniqid-based) untuk menghindari race condition
+        // saat dua checkout terjadi bersamaan pada waktu yang sama.
+        $date   = now()->format('Ymd');
+        $suffix = strtoupper(substr(str_replace('.', '', uniqid('', true)), -6));
+        return 'INV/' . $date . '/' . $suffix;
     }
 
     public function cancelExpiredOrders(): int
@@ -32,6 +32,7 @@ class OrderService
                        ->get();
 
         $count = 0;
+        /** @var Order $order */
         foreach ($orders as $order) {
             $order->update(['status' => Order::STATUS_EXPIRED, 'updated_by' => 'system_scheduler']);
             if ($order->payment) {

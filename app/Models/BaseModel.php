@@ -22,7 +22,10 @@ class BaseModel extends Model
         static::creating(function ($model) {
             $model->created_by   = auth()->user()?->username ?? 'system';
             $model->updated_by   = auth()->user()?->username ?? 'system';
-            $model->company_code = $model->company_code ?? 'UNIV';
+            // Ambil company_code dari user yang sedang login, bukan hardcode 'UNIV'
+            $model->company_code = $model->company_code
+                ?? auth()->user()?->company_code
+                ?? 'UNIV';
         });
 
         static::updating(function ($model) {
