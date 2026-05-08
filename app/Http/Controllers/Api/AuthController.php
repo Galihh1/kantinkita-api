@@ -109,8 +109,13 @@ class AuthController extends Controller
 
         ActivityLog::record('login', "Login berhasil: {$user->email}", $user->id);
 
-        $user->load(['tenant', 'assignedRole']);
+        $user->load(['tenant', 'assignedRole', 'staffTenants']);
         $user->computed_permissions = $user->getAllPermissions()->pluck('slug');
+
+        // Untuk staff: expose tenant pertama mereka agar frontend bisa subscribe ke Pusher channel
+        if ($user->role === 'staff' && $user->staffTenants->isNotEmpty()) {
+            $user->staff_tenant_id = $user->staffTenants->first()->id;
+        }
 
         return $this->success(['user' => $user, 'token' => $token], 'Login berhasil');
     }
@@ -124,8 +129,13 @@ class AuthController extends Controller
 
     public function me(Request $request)
     {
-        $user = $request->user()->load(['tenant', 'assignedRole']);
+        $user = $request->user()->load(['tenant', 'assignedRole', 'staffTenants']);
         $user->computed_permissions = $user->getAllPermissions()->pluck('slug');
+
+        if ($user->role === 'staff' && $user->staffTenants->isNotEmpty()) {
+            $user->staff_tenant_id = $user->staffTenants->first()->id;
+        }
+
         return $this->success($user);
     }
 
