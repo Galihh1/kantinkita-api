@@ -41,16 +41,18 @@ class StaffController extends Controller
         if (!$tenant) return $this->error('Owner belum memiliki tenant.', 403);
 
         $staff = User::create([
-            'name'         => $request->full_name,
-            'full_name'    => $request->full_name,
-            'username'     => $request->username,
-            'email'        => $request->email,
-            'phone'        => $request->phone,
-            'password'     => Hash::make($request->password),
-            'role'         => 'staff',
-            'company_code' => 'UNIV',
-            'created_by'   => $request->user()->username,
-            'updated_by'   => $request->user()->username,
+            'name'              => $request->full_name,
+            'full_name'         => $request->full_name,
+            'username'          => $request->username,
+            'email'             => $request->email,
+            'phone'             => $request->phone,
+            'password'          => Hash::make($request->password),
+            'role'              => 'staff',
+            'company_code'      => 'UNIV',
+            'status'            => 1,            // Akun langsung aktif karena dibuat oleh Owner
+            'profile_completed' => true,         // Semua data diisi oleh Owner — tidak perlu setup ulang
+            'created_by'        => $request->user()->username,
+            'updated_by'        => $request->user()->username,
         ]);
 
         $tenant->staff()->attach($staff->id);

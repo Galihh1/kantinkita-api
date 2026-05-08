@@ -66,22 +66,28 @@ class AuthController extends Controller
     public function register(RegisterRequest $request)
     {
         $user = User::create([
-            'name' => $request->full_name,
-            'full_name' => $request->full_name,
-            'username' => $request->username,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'password' => Hash::make($request->password),
-            'role' => 'customer',
-            'company_code' => 'UNIV',
-            'created_by' => $request->username,
-            'updated_by' => $request->username,
-            'status' => 1,
-            'profile_completed' => false,
+            'name'              => $request->full_name,
+            'full_name'         => $request->full_name,
+            'username'          => $request->username,
+            'email'             => $request->email,
+            'phone'             => $request->phone,
+            'password'          => Hash::make($request->password),
+            'role'              => 'customer',
+            'company_code'      => 'UNIV',
+            'created_by'        => $request->username,
+            'updated_by'        => $request->username,
+            'status'            => 1,
+            // Registrasi manual sudah mengisi semua data — profil dianggap lengkap.
+            // profile_completed: false hanya untuk OAuth user yang perlu setup via /account-setup.
+            'profile_completed' => true,
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
         ActivityLog::record('register', "User baru terdaftar: {$user->email}", $user->id);
+
+        // Sertakan permissions agar frontend router dapat navigasi ke dashboard yang benar.
+        $user->load(['tenant', 'assignedRole']);
+        $user->computed_permissions = $user->getAllPermissions()->pluck('slug');
 
         return $this->success(['user' => $user, 'token' => $token], 'Registrasi berhasil', 201);
     }
