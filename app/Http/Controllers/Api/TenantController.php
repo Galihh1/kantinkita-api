@@ -79,11 +79,20 @@ class TenantController extends Controller
             'phone'       => 'nullable|string|max:20',
             'min_order'   => 'nullable|numeric|min:0',
             'is_open'     => 'nullable|boolean',
+            'open_hours'  => 'nullable|string',   // JSON string dari frontend
             'photo'       => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'banner'      => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
 
         $data = $request->only(['tenant_name', 'description', 'address', 'phone', 'min_order', 'is_open']);
+
+        // Parse open_hours JSON string → array agar tersimpan sebagai JSONB di PostgreSQL
+        if ($request->filled('open_hours')) {
+            $decoded = json_decode($request->open_hours, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $data['open_hours'] = $decoded;
+            }
+        }
 
         if ($request->hasFile('photo')) {
             if ($tenant->photo && !\filter_var($tenant->photo, FILTER_VALIDATE_URL)) {
