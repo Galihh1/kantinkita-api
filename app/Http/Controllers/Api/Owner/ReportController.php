@@ -16,7 +16,9 @@ class ReportController extends Controller
     {
         $request->validate(['start_date' => 'required|date', 'end_date' => 'required|date|after_or_equal:start_date']);
 
-        $tenantId = $request->user()->tenant->id;
+        $tenant = $request->user()->tenant;
+        if (!$tenant) return $this->error('Owner belum memiliki tenant.', 403);
+        $tenantId = $tenant->id;
         $report   = $this->reportService->getSalesReport($tenantId, $request->start_date, $request->end_date);
 
         $orders = \App\Models\Order::with(['items'])
@@ -43,7 +45,9 @@ class ReportController extends Controller
     {
         $request->validate(['start_date' => 'required|date', 'end_date' => 'required|date']);
 
-        $tenantId = $request->user()->tenant->id;
+        $tenant = $request->user()->tenant;
+        if (!$tenant) return $this->error('Owner belum memiliki tenant.', 403);
+        $tenantId = $tenant->id;
         $pdf      = $this->reportService->exportPdf($tenantId, $request->start_date, $request->end_date);
 
         return $pdf->download("laporan-{$request->start_date}-{$request->end_date}.pdf");
@@ -53,7 +57,9 @@ class ReportController extends Controller
     {
         $request->validate(['start_date' => 'required|date', 'end_date' => 'required|date']);
 
-        $tenantId = $request->user()->tenant->id;
+        $tenant = $request->user()->tenant;
+        if (!$tenant) return $this->error('Owner belum memiliki tenant.', 403);
+        $tenantId = $tenant->id;
         $csv      = $this->reportService->exportCsv($tenantId, $request->start_date, $request->end_date);
 
         return response($csv, 200, [

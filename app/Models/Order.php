@@ -27,8 +27,8 @@ class Order extends BaseModel
 
     const VALID_TRANSITIONS = [
         self::STATUS_PENDING    => [self::STATUS_EXPIRED, self::STATUS_CANCELLED],
-        self::STATUS_PAID       => [self::STATUS_PROCESSING, self::STATUS_REFUNDED],
-        self::STATUS_PROCESSING => [self::STATUS_COMPLETED],
+        self::STATUS_PAID       => [self::STATUS_PROCESSING, self::STATUS_CANCELLED, self::STATUS_REFUNDED],
+        self::STATUS_PROCESSING => [self::STATUS_COMPLETED, self::STATUS_REFUNDED],
     ];
 
     public function user()    { return $this->belongsTo(User::class); }
