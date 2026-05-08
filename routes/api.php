@@ -102,7 +102,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // ─── STAFF & OWNER (Management) ────────────────
     Route::middleware(['role:staff,owner', 'tenant.active'])->prefix('staff')->group(function () {
         Route::get('/orders', [StaffOrderController::class, 'index'])->middleware('permission:read-pesanan');
+        Route::get('/orders/{id}', [StaffOrderController::class, 'show'])->middleware('permission:read-pesanan');
         Route::put('/orders/{id}/status', [StaffOrderController::class, 'updateStatus'])->middleware('permission:update-pesanan');
+        Route::post('/orders/{id}/confirm-payment', [StaffOrderController::class, 'confirmPayment'])->middleware('permission:update-pesanan');
         Route::get('/menus', [MenuController::class, 'index'])->middleware('permission:read-menu');
         Route::post('/menus', [MenuController::class, 'store'])->middleware('permission:create-menu');
         Route::put('/menus/{id}', [MenuController::class, 'update'])->middleware('permission:update-menu');
@@ -164,6 +166,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::apiResource('permissions', PermissionController::class);
         Route::apiResource('roles', RoleController::class);
         Route::post('/roles/{id}/sync', [RoleController::class, 'syncPermissions']);
+        Route::post('/roles/seed-defaults', [RoleController::class, 'seedDefaults']);
         Route::apiResource('document-types', DocumentTypeController::class);
 
         // Subscription Management

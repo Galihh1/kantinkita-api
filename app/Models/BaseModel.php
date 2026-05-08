@@ -32,4 +32,19 @@ class BaseModel extends Model
             $model->updated_by = auth()->user()?->username ?? 'system';
         });
     }
+
+    /**
+     * Force HTTPS untuk URL storage agar tidak kena Mixed Content di production.
+     * Cukup dipanggil dari getPhotoUrlAttribute() setiap model.
+     */
+    protected function storageUrl(?string $path): ?string
+    {
+        if (!$path) return null;
+        $url = filter_var($path, FILTER_VALIDATE_URL) ? $path : asset('storage/' . $path);
+        // Force HTTPS di production (Railway menghasilkan http:// dari asset())
+        if (app()->environment('production') || str_starts_with(config('app.url', ''), 'https')) {
+            $url = str_replace('http://', 'https://', $url);
+        }
+        return $url;
+    }
 }

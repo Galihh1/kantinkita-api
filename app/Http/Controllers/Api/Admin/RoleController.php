@@ -7,6 +7,7 @@ use App\Models\Permission;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Artisan;
 
 class RoleController extends Controller
 {
@@ -74,12 +75,32 @@ class RoleController extends Controller
         $role = Role::findOrFail($id);
         
         $request->validate([
-            'permissions' => 'required|array',
+            'permissions'   => 'required|array',
             'permissions.*' => 'exists:permissions,id',
         ]);
 
         $role->permissions()->sync($request->permissions);
 
         return $this->success($role->load('permissions'), 'Hak akses role berhasil diperbarui');
+    }
+
+    /**
+     * Seed default roles, permissions, dan user role_id mapping.
+     * Aman dipanggil berulang kali (menggunakan updateOrCreate).
+     * Gunakan jika roles/permissions kosong di production.
+     */
+    public function seedDefaults()
+    {
+        Artisan::call('db:seed', ['--class' => 'RolePermissionSeeder', '--force' => true]);
+        $output = Artisan::output();
+
+        $roleCount = Role::count();
+        $permCount = Permission::count();
+
+        return $this->success([
+            'roles_count'       => $roleCount,
+            'permissions_count' => $permCount,
+            'output'            => trim($output) ?: 'Seeder selesai dijalankan.',
+        ], 'Default roles & permissions berhasil di-seed');
     }
 }

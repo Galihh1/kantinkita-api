@@ -64,6 +64,9 @@ class PermissionController extends Controller
 
         if (isset($data['name'])) {
             $data['slug'] = Str::slug($data['name']);
+            // Auto-recompute resource saat nama berubah (konsisten dengan store())
+            $nameParts = explode(' ', $data['name'], 2);
+            $data['resource'] = count($nameParts) > 1 ? ucfirst($nameParts[1]) : ucfirst($nameParts[0]);
         }
 
         $permission->update($data);

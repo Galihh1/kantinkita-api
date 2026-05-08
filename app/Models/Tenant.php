@@ -27,6 +27,6 @@ class Tenant extends BaseModel
 
     public function getPhotoUrlAttribute(): ?string
     {
-        return $this->photo ? asset('storage/' . $this->photo) : null;
+        return $this->storageUrl($this->photo);
     }
 }

@@ -64,13 +64,13 @@ class User extends Authenticatable
     public function getPhotoUrlAttribute(): ?string
     {
         if (!$this->photo) return null;
-        
-        $url = filter_var($this->photo, FILTER_VALIDATE_URL) 
-               ? $this->photo 
+
+        $url = filter_var($this->photo, FILTER_VALIDATE_URL)
+               ? $this->photo
                : asset('storage/' . $this->photo);
 
-        // Always force HTTPS for production domain to prevent Mixed Content
-        if (str_contains($url, 'kantinkita-api-production.up.railway.app')) {
+        // Force HTTPS di production (Railway mengembalikan http:// dari asset())
+        if (app()->environment('production') || str_starts_with(config('app.url', ''), 'https')) {
             $url = str_replace('http://', 'https://', $url);
         }
 

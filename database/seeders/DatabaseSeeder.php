@@ -262,5 +262,8 @@ class DatabaseSeeder extends Seeder
             ['Staff',     'staff1@kantinkita.com',   'password123'],
             ['Customer',  'customer1@kantinkita.com','password123'],
         ]);
+
+        // Pastikan roles & permissions selalu di-seed
+        $this->call(RolePermissionSeeder::class);
     }
 }
